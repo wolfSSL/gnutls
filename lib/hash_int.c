@@ -192,16 +192,12 @@ int _gnutls_mac_fast(gnutls_mac_algorithm_t algorithm, const void *key,
 	/* check if a digest has been registered 
 	 */
 	cc = _gnutls_get_crypto_mac(algorithm);
-	if (
-#if defined(ENABLE_PKCS11) && defined(ENABLE_FIPS140)
-		/* Prioritize crypto from pkcs11 provider */
-		!_p11_provider_is_initialized() &&
-#endif
-		cc != NULL) {
-		if (cc->fast(algorithm, NULL, 0, key, keylen, text, textlen,
-			     digest) < 0) {
+	if (cc != NULL) {
+                ret = cc->fast(algorithm, NULL, 0, key, keylen, text, textlen,
+			       digest);
+		if (ret < 0) {
 			gnutls_assert();
-			return GNUTLS_E_HASH_FAILED;
+			return ret;
 		}
 
 		return 0;
