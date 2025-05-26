@@ -22,6 +22,18 @@ const gnutls_datum_t sha256_data = {
 	32
 };
 
+#ifdef GNUTLS_WOLFSSL
+/* sha384 hash of "hello" string */
+const gnutls_datum_t sha384_data = {
+	(void *)"\x59\xe1\x74\x87\x77\x44\x8c\x69\xde\x6b"
+		"\x80\x0d\x7a\x33\xbb\xfb\x9f\xf1\xb4\x63"
+		"\xe4\x43\x54\xc3\x55\x3b\xcd\xb9\xc6\x66"
+		"\xfa\x90\x12\x5a\x3c\x79\xf9\x03\x97\xbd"
+		"\xf5\xf6\xa1\x3d\xe8\x28\x68\x4f",
+	48
+};
+#endif
+
 /* gost r 34.11-94 hash of "hello" string */
 const gnutls_datum_t gostr94_data = {
 	(void *)"\x92\xea\x6d\xdb\xaf\x40\x02\x0d\xf3\x65"
@@ -113,6 +125,10 @@ static void test_sig(gnutls_pk_algorithm_t pk, unsigned hash, unsigned bits)
 		hash_data = &streebog256_data;
 	else if (hash == GNUTLS_DIG_STREEBOG_512)
 		hash_data = &streebog512_data;
+#ifdef GNUTLS_WOLFSSL
+	else if (hash == GNUTLS_DIG_SHA384)
+		hash_data = &sha384_data;
+#endif
 	else
 		abort();
 
