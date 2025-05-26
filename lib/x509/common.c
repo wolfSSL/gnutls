@@ -1092,6 +1092,67 @@ int _gnutls_x509_encode_and_copy_PKI_params(asn1_node dst, const char *dst_name,
 	return 0;
 }
 
+/* Encodes and copies the private key parameters into a
+ * subjectPublicKeyInfo structure.
+ *      
+ */	     
+int _gnutls_x509_encode_with_PKI_params(asn1_node dst,
+					const char *dst_name,
+					gnutls_x509_privkey_t key,
+					gnutls_datum_t *pubkey)
+{	       
+	const char *oid;  
+	gnutls_datum_t der = { NULL, 0 };
+	int result;     
+	char name[128]; 
+		
+	oid = gnutls_pk_get_oid(key->params.algo);
+	if (oid == NULL) {
+		gnutls_assert();
+		return GNUTLS_E_UNKNOWN_PK_ALGORITHM;
+	}		       
+    
+	/* write the OID
+	 */		     
+	_asnstr_append_name(name, sizeof(name), dst_name,
+			    ".algorithm.algorithm");
+			
+	result = asn1_write_value(dst, name, oid, 1);
+	if (result != ASN1_SUCCESS) {
+		gnutls_assert();
+		return _gnutls_asn2err(result);
+	}
+ 
+	result = _gnutls_x509_write_pubkey_params(&key->params, &der);
+	if (result < 0) {
+		gnutls_assert();
+		return result;
+	}
+	
+	_asnstr_append_name(name, sizeof(name), dst_name,
+			    ".algorithm.parameters");
+
+	result = asn1_write_value(dst, name, der.data, der.size);
+	_gnutls_free_datum(&der);
+
+	if (result != ASN1_SUCCESS) {
+		gnutls_assert();
+		return _gnutls_asn2err(result);
+	}
+
+	/* Write the DER parameters. (in bits)
+	 */
+	_asnstr_append_name(name, sizeof(name), dst_name, ".subjectPublicKey");
+	result = asn1_write_value(dst, name, pubkey->data, pubkey->size * 8);
+
+	if (result != ASN1_SUCCESS) {
+		gnutls_assert();
+		return _gnutls_asn2err(result);
+	}
+
+	return 0;
+}
+
 /* Encodes and public key parameters into a
  * subjectPublicKeyInfo structure and stores it in der.
  */

@@ -272,10 +272,12 @@ typedef int (*gnutls_pk_import_pubkey_func)(void **ctx,
 					    gnutls_pk_algorithm_t **algo,
 					    gnutls_ecc_curve_t *curve,
 					    const gnutls_datum_t * data);
-typedef int (*gnutls_pk_export_pubkey_func)(void **pub_key_ctx, void *priv_key_ctx, const void* pubkey);
+typedef int (*gnutls_pk_export_pubkey_func)(void **pub_key_ctx,
+					    void *priv_key_ctx,
+					    const void* pubkey, int with_hdr);
 typedef int (*gnutls_pk_export_privkey_x509_func)(void *priv_key_ctx, const void* data);
 typedef int (*gnutls_pk_export_pubkey_x509_func)(void *pub_key_ctx, const void* data);
-typedef int (*gnutls_pk_import_privkey_x509_func)(void **ctx, gnutls_pk_algorithm_t **algo, gnutls_ecc_curve_t *curve,
+typedef int (*gnutls_pk_import_privkey_x509_func)(void **ctx, gnutls_pk_algorithm_t *algo, gnutls_ecc_curve_t *curve,
         const gnutls_datum_t * data, gnutls_x509_crt_fmt_t format, const void *y, const void *x);
 typedef int (*gnutls_pk_import_pubkey_x509_func)(void **ctx, gnutls_pk_algorithm_t **algo,
 	gnutls_datum_t * data, unsigned int flags, const void *y, const void *x);
@@ -288,6 +290,7 @@ typedef int (*gnutls_pk_import_pubkey_url_func)(void **ctx, const void *pubkey, 
 typedef int (*gnutls_pk_sign_func)(void *ctx,
                                    const void *privkey,
                                    gnutls_digest_algorithm_t hash,
+                                   int hash_enc,
                                    const void *data,
                                    const void *signature,
                                    unsigned int flags,

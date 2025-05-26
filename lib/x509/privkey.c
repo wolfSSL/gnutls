@@ -64,6 +64,8 @@ int gnutls_x509_privkey_init(gnutls_x509_privkey_t *key)
 
 void _gnutls_x509_privkey_reinit(gnutls_x509_privkey_t key)
 {
+	const gnutls_crypto_pk_st *cc;
+
 	gnutls_pk_params_clear(&key->params);
 	gnutls_pk_params_release(&key->params);
 	/* avoid reuse of fields which may have had some sensible value */
@@ -72,6 +74,12 @@ void _gnutls_x509_privkey_reinit(gnutls_x509_privkey_t key)
 	if (key->key)
 		asn1_delete_structure2(&key->key, ASN1_DELETE_FLAG_ZEROIZE);
 	key->key = NULL;
+
+	cc = _gnutls_get_crypto_pk(key->pk_algorithm);
+	if (cc != NULL && cc->deinit_backend != NULL) {
+		cc->deinit_backend(key->pk_ctx);
+		key->pk_ctx = NULL;
+	}
 }
 
 /**
@@ -104,23 +112,24 @@ int gnutls_x509_privkey_cpy(gnutls_x509_privkey_t dst,
 			    gnutls_x509_privkey_t src)
 {
 	int ret;
+	const gnutls_crypto_pk_st *cc;
 
 	if (!src || !dst)
 		return GNUTLS_E_INVALID_REQUEST;
 
-        const gnutls_crypto_pk_st *cc = _gnutls_get_crypto_pk(src->pk_algorithm);
-        if (cc != NULL && cc->copy_backend != NULL) {
-                ret = cc->copy_backend(&dst->pk_ctx, src->pk_ctx,
+	cc = _gnutls_get_crypto_pk(src->pk_algorithm);
+	if (cc != NULL && cc->copy_backend != NULL) {
+		ret = cc->copy_backend(&dst->pk_ctx, src->pk_ctx,
 				       src->pk_algorithm);
-                if (ret < 0 && ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
-                        gnutls_assert();
-                        return ret;
-                } else if (ret == 0) {
+		if (ret < 0 && ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
+			gnutls_assert();
+			return ret;
+		} else if (ret == 0) {
 			dst->pk_algorithm = src->pk_algorithm;
 			dst->params.algo = src->params.algo;
-                        return 0;
-                }
-        }
+			return 0;
+		}
+	}
 
 	ret = _gnutls_pk_params_copy(&dst->params, &src->params);
 	if (ret < 0) {
@@ -658,7 +667,7 @@ static int _gnutls_x509_privkey_import_provider(gnutls_x509_privkey_t key,
 {
 	int result;
 	const gnutls_crypto_pk_st *cc;
-	gnutls_pk_algorithm_t *algo;
+	gnutls_pk_algorithm_t algo;
 	gnutls_ecc_curve_t curve;
 
  	cc = _gnutls_get_crypto_pk(key->pk_algorithm);
@@ -667,28 +676,13 @@ static int _gnutls_x509_privkey_import_provider(gnutls_x509_privkey_t key,
 		return GNUTLS_E_ALGO_NOT_SUPPORTED;
 	}
 
-	algo = gnutls_malloc(sizeof(gnutls_pk_algorithm_t));
-	if (algo == NULL) {
-		gnutls_assert();
-		return GNUTLS_E_MEMORY_ERROR;
-	}
-
 	result = cc->import_privkey_x509_backend(&key->pk_ctx, &algo, &curve,
 						 data, format, NULL, NULL);
 
-	key->pk_algorithm = *algo;
-	key->params.algo = *algo;
+	key->pk_algorithm = algo;
+	key->params.algo = algo;
 	key->params.curve = curve;
 
-	if (result == GNUTLS_E_ALGO_NOT_SUPPORTED) {
-		return result;
-	}
-	if (result < 0) {
-		gnutls_assert();
-		return result;
-	}
-
-	result = cc->copy_backend(&key->pk_ctx, key->pk_ctx, key->pk_algorithm);
 	if (result == GNUTLS_E_ALGO_NOT_SUPPORTED) {
 		return result;
 	}
@@ -1371,20 +1365,14 @@ int gnutls_x509_privkey_import_dh_raw(gnutls_x509_privkey_t key,
 		_gnutls_get_crypto_pk(key->pk_algorithm);
 
 	if (cc != NULL && cc->import_privkey_x509_backend != NULL) {
-		gnutls_pk_algorithm_t *algo;
+		gnutls_pk_algorithm_t algo;
 		gnutls_ecc_curve_t curve;
-
-		algo = gnutls_malloc(sizeof(gnutls_pk_algorithm_t));
-		if (algo == NULL) {
-			gnutls_assert();
-			return GNUTLS_E_MEMORY_ERROR;
-		}
 
 		result = cc->import_privkey_x509_backend(&key->pk_ctx, &algo, &curve,
 							 NULL, GNUTLS_X509_FMT_DER, y, x);
 
-		key->pk_algorithm = *algo;
-		key->params.algo = *algo;
+		key->pk_algorithm = algo;
+		key->params.algo = algo;
 		key->params.curve = curve;
 
 		if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
@@ -1895,9 +1883,14 @@ int gnutls_x509_privkey_export2(gnutls_x509_privkey_t key,
 				ret = gnutls_pem_base64_encode(header,
 					&der, (char*)out->data, &size);
 				if (ret < 0) {
+					gnutls_free(der.data);
+					gnutls_free(out->data);
+					out->data = NULL;
+					out->size = 0;
 					gnutls_assert();
 					return ret;
 				}
+				gnutls_free(der.data);
 				out->size = size;
 			}
 			return 0;

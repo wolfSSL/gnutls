@@ -491,18 +491,15 @@ int gnutls_privkey_init(gnutls_privkey_t *key)
  **/
 void gnutls_privkey_deinit(gnutls_privkey_t key)
 {
-    if (key == NULL)
-        return;
-
-    const gnutls_crypto_pk_st *cc = _gnutls_get_crypto_pk(key->pk_algorithm);
-
-    if (cc != NULL && cc->deinit_backend != NULL) {
-        cc->deinit_backend(key->pk_ctx);
-        return;
-    }
+	const gnutls_crypto_pk_st *cc;
 
 	if (key == NULL)
 		return;
+
+	cc = _gnutls_get_crypto_pk(key->pk_algorithm);
+	if (cc != NULL && cc->deinit_backend != NULL) {
+		cc->deinit_backend(key->pk_ctx);
+	}
 
 	if (key->flags & GNUTLS_PRIVKEY_IMPORT_AUTO_RELEASE ||
 	    key->flags & GNUTLS_PRIVKEY_IMPORT_COPY)
@@ -1250,7 +1247,7 @@ int gnutls_privkey_sign_data(gnutls_privkey_t signer,
 	cc = _gnutls_get_crypto_pk(signer->pk_algorithm);
 	if (cc != NULL && cc->sign_backend != NULL) {
 		result = cc->sign_backend(signer->pk_ctx,
-			&signer->key.x509->params.raw_priv, hash, data,
+			&signer->key.x509->params.raw_priv, hash, 0, data,
 			signature, flags, GNUTLS_E_NO_SIGN_ALGORITHM_SET,
 			&params);
 		if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
@@ -1325,7 +1322,7 @@ int gnutls_privkey_sign_data2(gnutls_privkey_t signer,
 
 		result = cc->sign_backend(signer->pk_ctx,
 					  &signer->key.x509->params.raw_priv,
-					  hash, data, signature, flags, algo,
+					  hash, 0, data, signature, flags, algo,
 					  &params);
 		if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
 			gnutls_assert();
