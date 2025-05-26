@@ -321,7 +321,7 @@ typedef int (*gnutls_pk_pubkey_export_dh_raw_func)(void *ctx, const void *y);
 typedef int (*gnutls_pk_privkey_import_ecdh_raw_func)(void *ctx, int curve, const void *x, const void *y, const void *k);
 typedef int (*gnutls_pk_pubkey_import_ecdh_raw_func)(void *ctx, int curve, const void *x, const void *y);
 typedef int (*gnutls_pk_privkey_export_ecdh_raw_func)(void *ctx, const void *x, const void *y, const void *k);
-typedef int (*gnutls_pk_pubkey_export_ecdh_raw_func)(void *ctx, const void *x, const void *y);
+typedef int (*gnutls_pk_pubkey_export_ecdh_raw_func)(void *ctx, const void *x, const void *y, gnutls_ecc_curve_t *curve);
 typedef void (*gnutls_pk_deinit_func)(void *ctx);
 typedef int (*gnutls_pk_copy_func)(void **dst, void *src, gnutls_pk_algorithm_t algo);
 
