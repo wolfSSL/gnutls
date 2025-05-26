@@ -144,7 +144,8 @@ inline static int _encode_privkey(gnutls_x509_privkey_t pkey,
 		const gnutls_crypto_pk_st *cc;
 		cc = _gnutls_get_crypto_pk(pkey->params.algo);
 		if (cc != NULL && cc->export_privkey_x509_backend != NULL) {
-			ret = cc->export_privkey_x509_backend(pkey->pk_ctx, raw);
+			ret = cc->export_privkey_x509_backend(pkey->pk_ctx,
+							      raw);
 			if (ret < 0 && ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
 				gnutls_assert();
 				goto error;
@@ -977,6 +978,7 @@ static int _decode_pkcs8_rsa_key(asn1_node pkcs8_asn,
 {
 	int ret;
 	gnutls_datum_t tmp = { NULL, 0 };
+	const gnutls_crypto_pk_st *cc;
 
 	ret = _gnutls_x509_read_value(pkcs8_asn, "privateKey", &tmp);
 	if (ret < 0) {
@@ -985,16 +987,13 @@ static int _decode_pkcs8_rsa_key(asn1_node pkcs8_asn,
 	}
 
 	pkey->key = _gnutls_privkey_decode_pkcs1_rsa_key(&tmp, pkey);
-	{
-		const gnutls_crypto_pk_st *cc;
-		cc = _gnutls_get_crypto_pk(pkey->params.algo);
-		if (cc != NULL && cc->import_privkey_x509_backend != NULL) {
-			gnutls_pk_algorithm_t *algo;
-			gnutls_ecc_curve_t curve;
-			cc->import_privkey_x509_backend(&pkey->pk_ctx,
-				&algo, &curve, &tmp, GNUTLS_X509_FMT_DER,
-				NULL, NULL);
-		}
+	cc = _gnutls_get_crypto_pk(GNUTLS_PK_RSA);
+	if (cc != NULL && cc->import_privkey_x509_backend != NULL) {
+		gnutls_pk_algorithm_t algo;
+		gnutls_ecc_curve_t curve;
+		cc->import_privkey_x509_backend(&pkey->pk_ctx, &algo, &curve,
+						&tmp, GNUTLS_X509_FMT_DER, NULL,
+						NULL);
 	}
 	_gnutls_free_key_datum(&tmp);
 

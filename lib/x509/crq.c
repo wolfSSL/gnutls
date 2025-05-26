@@ -648,12 +648,20 @@ int gnutls_x509_crq_set_key(gnutls_x509_crq_t crq, gnutls_x509_privkey_t key)
 		};
 
 		result = cc->export_pubkey_backend(&crq->pk_ctx, key->pk_ctx,
-						   &datum);
+						   &datum, 0);
 		if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
 			gnutls_assert();
 			return result;
 		} else if (result == 0) {
-			gnutls_free(datum.data);
+			crq->pk_algorithm = key->pk_algorithm;
+                        result = _gnutls_x509_encode_with_PKI_params(crq->crq,
+                                "certificationRequestInfo.subjectPKInfo", key,
+                                &datum);
+                        gnutls_free(datum.data);
+                        if (result != 0) {
+                                gnutls_assert();
+                                return result;
+                        }
 			return 0;
 		}
 	}

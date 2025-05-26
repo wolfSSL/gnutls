@@ -84,6 +84,7 @@ typedef struct gnutls_x509_dn_st {
 
 typedef struct gnutls_x509_crt_int {
 	void *pk_ctx;
+	gnutls_pk_algorithm_t pk_algorithm;
 	asn1_node cert;
 	int use_extensions;
 	unsigned expanded; /* a certificate has been expanded */
@@ -113,7 +114,8 @@ typedef struct gnutls_x509_crt_int {
 #define MODIFIED(crt) crt->modified = 1
 
 typedef struct gnutls_x509_crq_int {
-    void *pk_ctx;
+	void *pk_ctx;
+	gnutls_pk_algorithm_t pk_algorithm;
 	asn1_node crq;
 } gnutls_x509_crq_int;
 

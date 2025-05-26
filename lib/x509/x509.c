@@ -1772,6 +1772,10 @@ int gnutls_x509_crt_get_pk_algorithm(gnutls_x509_crt_t cert, unsigned int *bits)
 	if (bits)
 		*bits = 0;
 
+	if (cert->pk_algorithm != GNUTLS_PK_UNKNOWN) {
+		return cert->pk_algorithm;
+	}
+
 	result = _gnutls_x509_get_pk_algorithm(
 		cert->cert, "tbsCertificate.subjectPublicKeyInfo", NULL, bits);
 
@@ -1799,10 +1803,22 @@ int gnutls_x509_crt_get_spki(gnutls_x509_crt_t cert, gnutls_x509_spki_t spki,
 {
 	int result;
 	gnutls_x509_spki_st params;
+	const gnutls_crypto_pk_st *cc;
 
 	if (cert == NULL) {
 		gnutls_assert();
 		return GNUTLS_E_INVALID_REQUEST;
+	}
+
+	cc = _gnutls_get_crypto_pk(GNUTLS_PK_RSA);
+	if (cc != NULL && cc->get_spki != NULL) {
+		result = cc->get_spki(cert->pk_ctx, spki);
+		if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
+			gnutls_assert();
+			return result;
+		} else if (result == 0) {
+			return 0;
+		}
 	}
 
 	spki->pk = gnutls_x509_crt_get_pk_algorithm(cert, NULL);
