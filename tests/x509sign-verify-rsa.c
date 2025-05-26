@@ -65,8 +65,13 @@ void doit(void)
 	}
 
 	test_sig(GNUTLS_PK_RSA, GNUTLS_DIG_SHA1, rsa_size1);
+#ifndef GNUTLS_WOLFSSL
 	test_sig(GNUTLS_PK_RSA, GNUTLS_DIG_SHA256, rsa_size2);
 	test_sig(GNUTLS_PK_RSA_PSS, GNUTLS_DIG_SHA256, rsa_size2);
+#else
+	test_sig(GNUTLS_PK_RSA, GNUTLS_DIG_SHA384, rsa_size2);
+	test_sig(GNUTLS_PK_RSA_PSS, GNUTLS_DIG_SHA384, rsa_size2);
+#endif
 
 	gnutls_global_deinit();
 }
