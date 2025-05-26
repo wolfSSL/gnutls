@@ -99,16 +99,24 @@ unsigned pubkey_to_bits(const gnutls_pk_params_st *params)
  **/
 int gnutls_pubkey_get_pk_algorithm(gnutls_pubkey_t key, unsigned int *bits)
 {
+    int result;
+
 	if (bits) {
 		const gnutls_crypto_pk_st *cc;
 		cc = _gnutls_get_crypto_pk(key->pk_algorithm);
 		if (cc != NULL && cc->get_bits != NULL) {
-			cc->get_bits(key->pk_ctx, bits);
+			result = cc->get_bits(key->pk_ctx, bits);
+            if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
+                gnutls_assert();
+                return result;
+            } else if (result == 0) {
+                return key->params.algo;
+            }
 		}
-		else {
-			*bits = key->bits;
-		}
+
+        *bits = key->bits;
 	}
+
 
 	return key->params.algo;
 }
@@ -1485,6 +1493,17 @@ int gnutls_pubkey_export_ecc_raw2(gnutls_pubkey_t key,
 	if (curve)
 		*curve = key->params.curve;
 
+	const gnutls_crypto_pk_st *cc = _gnutls_get_crypto_pk(key->params.algo);
+	if (cc != NULL && cc->pubkey_export_ecdh_raw_backend != NULL) {
+		ret = cc->pubkey_export_ecdh_raw_backend(key->pk_ctx, x, y, curve);
+		if (ret < 0 && ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
+			gnutls_assert();
+			return ret;
+		} else if (ret == 0) {
+			return 0;
+		}
+	}
+
 	if (key->params.algo == GNUTLS_PK_EDDSA_ED25519 ||
 	    key->params.algo == GNUTLS_PK_EDDSA_ED448 ||
 	    key->params.algo == GNUTLS_PK_ECDH_X25519 ||
@@ -1499,19 +1518,8 @@ int gnutls_pubkey_export_ecc_raw2(gnutls_pubkey_t key,
 			y->data = NULL;
 			y->size = 0;
 		}
-		return 0;
-	}
 
-	/* ECDSA */
-	const gnutls_crypto_pk_st *cc = _gnutls_get_crypto_pk(GNUTLS_PK_ECDSA);
-	if (cc != NULL && cc->pubkey_export_ecdh_raw_backend != NULL) {
-		ret = cc->pubkey_export_ecdh_raw_backend(key->pk_ctx, x, y);
-		if (ret < 0 && ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
-			gnutls_assert();
-			return ret;
-		} else if (ret == 0) {
-			return 0;
-		}
+		return 0;
 	}
 
 	/* X */
