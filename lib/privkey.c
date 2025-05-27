@@ -1629,6 +1629,26 @@ cleanup:
 	return ret;
 }
 
+static int privkey_sign_x509_raw_data_provider(gnutls_privkey_t key,
+	const gnutls_sign_entry_st *se, const gnutls_datum_t *data,
+	gnutls_datum_t *signature, gnutls_x509_spki_st *params)
+{
+	const gnutls_crypto_pk_st *cc;
+	int result = GNUTLS_E_ALGO_NOT_SUPPORTED;
+
+	cc = _gnutls_get_crypto_pk(key->pk_algorithm);
+	if (cc != NULL && cc->sign_hash_backend != NULL) {
+		result = cc->sign_hash_backend(key->pk_ctx, NULL,
+			GNUTLS_DIG_UNKNOWN, data, signature, 0,
+			GNUTLS_SIGN_UNKNOWN, params);
+		if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
+			gnutls_assert();
+		}
+	}
+
+	return result;
+}
+
 /*-
  * privkey_sign_raw_data:
  * @key: Holds the key
@@ -1655,6 +1675,8 @@ int privkey_sign_raw_data(gnutls_privkey_t key, const gnutls_sign_entry_st *se,
 			  const gnutls_datum_t *data, gnutls_datum_t *signature,
 			  gnutls_x509_spki_st *params)
 {
+	int result;
+
 	if (unlikely(se == NULL))
 		return gnutls_assert_val(GNUTLS_E_INVALID_REQUEST);
 
@@ -1665,6 +1687,11 @@ int privkey_sign_raw_data(gnutls_privkey_t key, const gnutls_sign_entry_st *se,
 						   signature, params);
 #endif
 	case GNUTLS_PRIVKEY_X509:
+		result = privkey_sign_x509_raw_data_provider(key, se, data,
+							     signature, params);
+		if (result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
+			return result;
+		}
 		return _gnutls_pk_sign(se->pk, signature, data,
 				       &key->key.x509->params, params);
 	case GNUTLS_PRIVKEY_EXT:
