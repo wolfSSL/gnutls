@@ -92,11 +92,22 @@ int gnutls_privkey_export_rsa_raw2(gnutls_privkey_t key, gnutls_datum_t *m,
 {
 	gnutls_pk_params_st params;
 	int ret;
+        const gnutls_crypto_pk_st *cc;
 
 	if (key == NULL) {
 		gnutls_assert();
 		return GNUTLS_E_INVALID_REQUEST;
 	}
+
+        cc = _gnutls_get_crypto_pk(key->pk_algorithm);
+        if (cc != NULL && cc->export_rsa_raw_backend != NULL) {
+                ret = cc->export_rsa_raw_backend(key->pk_ctx, m, e, d, p, q, u,
+                                                 e1, e2, flags);
+                if (ret < 0) {
+                        gnutls_assert();
+                }
+                return ret;
+        }
 
 	gnutls_pk_params_init(&params);
 
@@ -305,7 +316,8 @@ int gnutls_privkey_export_ecc_raw2(gnutls_privkey_t key,
 
 	const gnutls_crypto_pk_st *cc = _gnutls_get_crypto_pk(GNUTLS_PK_ECDSA);
 	if (cc != NULL && cc->privkey_export_ecdh_raw_backend != NULL) {
-		ret = cc->privkey_export_ecdh_raw_backend(key->pk_ctx, x, y, k);
+		ret = cc->privkey_export_ecdh_raw_backend(key->pk_ctx, curve, x,
+			  y, k, (flags & GNUTLS_EXPORT_FLAG_NO_LZ) == 0);
 		if (ret < 0 && ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
 			gnutls_assert();
 			return ret;
