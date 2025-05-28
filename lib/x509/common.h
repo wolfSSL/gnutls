@@ -225,6 +225,10 @@ int _gnutls_x509_get_signature(asn1_node src, const char *src_name,
 int _gnutls_get_asn_mpis(asn1_node asn, const char *root,
 			 gnutls_pk_params_st *params);
 
+int _gnutls_get_key_id_provider(gnutls_x509_privkey_t key,
+				unsigned char *output_data,
+				size_t *output_data_size, unsigned flags);
+
 int _gnutls_get_key_id(gnutls_pk_params_st *, unsigned char *output_data,
 		       size_t *output_data_size, unsigned flags);
 

@@ -430,6 +430,9 @@ static int check_privkey_import_export(void)
 		gnutls_privkey_deinit(key);
 	}
 
+/* FIPS won't have partial parameters and reconstruction needs to be done
+ * potentially with blinding. */
+#ifndef GNUTLS_WOLFSSL
 	/* Optional private exponent */
 	ret = gnutls_privkey_init(&key);
 	if (ret < 0)
@@ -463,6 +466,7 @@ static int check_privkey_import_export(void)
 	gnutls_free(e2.data);
 
 	gnutls_privkey_deinit(key);
+#endif
 
 	ret = gnutls_privkey_init(&key);
 	if (ret < 0)

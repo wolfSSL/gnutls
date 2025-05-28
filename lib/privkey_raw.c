@@ -421,7 +421,7 @@ int gnutls_privkey_import_rsa_raw(
 		return gnutls_assert_val(ret);
 
 	ret = gnutls_x509_privkey_import_rsa_raw2(xkey, m, e, d, p, q, u, e1,
-						  e1);
+						  e2);
 	if (ret < 0) {
 		gnutls_assert();
 		goto error;

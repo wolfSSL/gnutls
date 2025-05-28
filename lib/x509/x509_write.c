@@ -231,13 +231,8 @@ int gnutls_x509_crt_set_key(gnutls_x509_crt_t crt, gnutls_x509_privkey_t key)
 
 	cc = _gnutls_get_crypto_pk(key->pk_algorithm);
 	if (cc != NULL && cc->export_pubkey_backend != NULL) {
-		gnutls_datum_t datum = {
-			.data = NULL,
-			.size = 0
-		};
-
 		result = cc->export_pubkey_backend(&crt->pk_ctx, key->pk_ctx,
-						   &datum, 0);
+						   &crt->raw_spki, 0);
 		if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
 			gnutls_assert();
 			return result;
@@ -246,8 +241,7 @@ int gnutls_x509_crt_set_key(gnutls_x509_crt_t crt, gnutls_x509_privkey_t key)
 			result = _gnutls_x509_encode_with_PKI_params(
 				crt->cert,
 				"tbsCertificate.subjectPublicKeyInfo", key,
-				&datum);
-			gnutls_free(datum.data);
+				&crt->raw_spki);
 			if (result != 0) {
 				gnutls_assert();
 				return result;

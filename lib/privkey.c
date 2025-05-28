@@ -1062,6 +1062,7 @@ int gnutls_privkey_export_x509(gnutls_privkey_t pkey,
 		if (ret == 0) {
 			(*key)->pk_algorithm = pkey->key.x509->params.algo;
 			(*key)->params.algo = pkey->key.x509->params.algo;
+			(*key)->params.curve = pkey->key.x509->params.curve;
                         memcpy(&(*key)->params.spki,
 			       &pkey->key.x509->params.spki,
 			       sizeof(gnutls_x509_spki_st));
@@ -1521,6 +1522,8 @@ int gnutls_privkey_sign_hash(gnutls_privkey_t signer,
 
 	cc = _gnutls_get_crypto_pk(signer->pk_algorithm);
 	if (cc != NULL && cc->sign_hash_backend != NULL) {
+		FAIL_IF_LIB_ERROR;
+
 		result = cc->sign_hash_backend(signer->pk_ctx, signer,
 			hash_algo, hash_data, signature, flags,
 			GNUTLS_E_NO_SIGN_ALGORITHM_SET, &params);
