@@ -85,7 +85,7 @@ inline static int _encode_privkey(gnutls_x509_privkey_t pkey,
 						priv_raw.data, priv_raw.size,
 						raw);
 				gnutls_free(priv_raw.data);
-                        	return 0;
+				return 0;
 			}
 		}
 

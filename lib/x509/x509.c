@@ -3146,6 +3146,96 @@ int gnutls_x509_crt_export2(gnutls_x509_crt_t cert,
 					out);
 }
 
+static int _gnutls_x509_encode_PKI(gnutls_datum_t *der,
+				   gnutls_x509_privkey_t key)
+{
+	int ret;
+	asn1_node tmp;
+	const gnutls_crypto_pk_st *cc;
+	gnutls_datum_t datum = {
+		.data = NULL,
+		.size = 0
+	};
+	void *pk_ctx;
+
+	ret = asn1_create_element(_gnutls_get_pkix(), "PKIX1.Certificate",
+				  &tmp);
+	if (ret != ASN1_SUCCESS) {
+		gnutls_assert();
+		return _gnutls_asn2err(ret);
+	}
+
+	cc = _gnutls_get_crypto_pk(key->pk_algorithm);
+	ret = cc->export_pubkey_backend(&pk_ctx, key->pk_ctx, &datum, 0);
+	if (ret < 0 && ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
+		gnutls_assert();
+		goto cleanup;
+	}
+	if (ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
+		goto cleanup;
+	}
+	if (ret == 0) {
+		cc->deinit_backend(pk_ctx);
+		ret = _gnutls_x509_encode_with_PKI_params(tmp,
+			"tbsCertificate.subjectPublicKeyInfo", key, &datum);
+		gnutls_free(datum.data);
+		if (ret != ASN1_SUCCESS) {
+			gnutls_assert();
+			ret = _gnutls_asn2err(ret);
+			goto cleanup;
+		}
+	}
+
+	ret = _gnutls_x509_der_encode(
+		tmp, "tbsCertificate.subjectPublicKeyInfo", der, 0);
+
+cleanup:
+	asn1_delete_structure(&tmp);
+
+	return ret;
+}
+
+int _gnutls_get_key_id_provider(gnutls_x509_privkey_t key,
+				unsigned char *output_data,
+				size_t *output_data_size, unsigned flags)
+{
+	int ret = 0;
+	gnutls_datum_t der = { NULL, 0 };
+	gnutls_digest_algorithm_t hash = GNUTLS_DIG_SHA1;
+	unsigned int digest_len;
+
+	if ((flags & GNUTLS_KEYID_USE_SHA512) ||
+	    (flags & GNUTLS_KEYID_USE_BEST_KNOWN))
+		hash = GNUTLS_DIG_SHA512;
+	else if (flags & GNUTLS_KEYID_USE_SHA256)
+		hash = GNUTLS_DIG_SHA256;
+
+	digest_len = _gnutls_hash_get_algo_len(hash_to_entry(hash));
+
+	if (output_data == NULL || *output_data_size < digest_len) {
+		gnutls_assert();
+		*output_data_size = digest_len;
+		return GNUTLS_E_SHORT_MEMORY_BUFFER;
+	}
+
+	ret = _gnutls_x509_encode_PKI(&der, key);
+	if (ret < 0)
+		return gnutls_assert_val(ret);
+
+	ret = _gnutls_hash_fast(hash, der.data, der.size, output_data);
+	if (ret < 0) {
+		gnutls_assert();
+		goto cleanup;
+	}
+	*output_data_size = digest_len;
+
+	ret = 0;
+
+cleanup:
+	_gnutls_free_datum(&der);
+	return ret;
+}
+
 int _gnutls_get_key_id(gnutls_pk_params_st *params, unsigned char *output_data,
 		       size_t *output_data_size, unsigned flags)
 {
