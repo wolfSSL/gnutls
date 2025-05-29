@@ -3146,8 +3146,9 @@ int gnutls_x509_crt_export2(gnutls_x509_crt_t cert,
 					out);
 }
 
-static int _gnutls_x509_encode_PKI(gnutls_datum_t *der,
-				   gnutls_x509_privkey_t key)
+static int _gnutls_x509_encode_PKI_provider(gnutls_datum_t *der,
+					    gnutls_pk_params_st *params,
+					    void* pk_ctx)
 {
 	int ret;
 	asn1_node tmp;
@@ -3156,7 +3157,7 @@ static int _gnutls_x509_encode_PKI(gnutls_datum_t *der,
 		.data = NULL,
 		.size = 0
 	};
-	void *pk_ctx;
+	void *dup_pk_ctx;
 
 	ret = asn1_create_element(_gnutls_get_pkix(), "PKIX1.Certificate",
 				  &tmp);
@@ -3165,19 +3166,19 @@ static int _gnutls_x509_encode_PKI(gnutls_datum_t *der,
 		return _gnutls_asn2err(ret);
 	}
 
-	cc = _gnutls_get_crypto_pk(key->pk_algorithm);
-	ret = cc->export_pubkey_backend(&pk_ctx, key->pk_ctx, &datum, 0);
+	cc = _gnutls_get_crypto_pk(params->algo);
+	ret = cc->export_pubkey_backend(&dup_pk_ctx, pk_ctx, &datum, 0);
 	if (ret < 0 && ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
 		gnutls_assert();
 		goto cleanup;
 	}
-	if (ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
+	if (ret != 0 && ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
 		goto cleanup;
 	}
 	if (ret == 0) {
-		cc->deinit_backend(pk_ctx);
+		cc->deinit_backend(dup_pk_ctx);
 		ret = _gnutls_x509_encode_with_PKI_params(tmp,
-			"tbsCertificate.subjectPublicKeyInfo", key, &datum);
+			"tbsCertificate.subjectPublicKeyInfo", params, &datum);
 		gnutls_free(datum.data);
 		if (ret != ASN1_SUCCESS) {
 			gnutls_assert();
@@ -3195,7 +3196,8 @@ cleanup:
 	return ret;
 }
 
-int _gnutls_get_key_id_provider(gnutls_x509_privkey_t key,
+int _gnutls_get_key_id_provider(gnutls_pk_params_st *params,
+				void *pk_ctx,
 				unsigned char *output_data,
 				size_t *output_data_size, unsigned flags)
 {
@@ -3218,7 +3220,7 @@ int _gnutls_get_key_id_provider(gnutls_x509_privkey_t key,
 		return GNUTLS_E_SHORT_MEMORY_BUFFER;
 	}
 
-	ret = _gnutls_x509_encode_PKI(&der, key);
+	ret = _gnutls_x509_encode_PKI_provider(&der, params, pk_ctx);
 	if (ret < 0)
 		return gnutls_assert_val(ret);
 
@@ -3303,10 +3305,36 @@ int gnutls_x509_crt_get_key_id(gnutls_x509_crt_t crt, unsigned int flags,
 {
 	int ret = 0;
 	gnutls_pk_params_st params;
+	const gnutls_crypto_pk_st *cc;
+	gnutls_pubkey_t pubkey;
 
 	if (crt == NULL) {
 		gnutls_assert();
 		return GNUTLS_E_INVALID_REQUEST;
+	}
+
+	cc = _gnutls_get_crypto_pk(crt->pk_algorithm);
+	if (cc != NULL) {
+		ret = gnutls_pubkey_init(&pubkey);
+		if (ret < 0) {
+			gnutls_assert();
+			return ret;
+		}
+		ret = gnutls_pubkey_import_x509(pubkey, crt, 0);
+		if (ret < 0) {
+			gnutls_pubkey_deinit(pubkey);
+			gnutls_assert();
+			return ret;
+		}
+		cc = _gnutls_get_crypto_pk(pubkey->params.algo);
+		if (cc != NULL) {
+			ret = _gnutls_get_key_id_provider(&pubkey->params,
+				pubkey->pk_ctx, output_data, output_data_size,
+				flags);
+			gnutls_pubkey_deinit(pubkey);
+
+			return ret;
+		}
 	}
 
 	/* initializes params */

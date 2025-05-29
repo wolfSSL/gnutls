@@ -240,8 +240,8 @@ int gnutls_x509_crt_set_key(gnutls_x509_crt_t crt, gnutls_x509_privkey_t key)
 			crt->pk_algorithm = key->pk_algorithm;
 			result = _gnutls_x509_encode_with_PKI_params(
 				crt->cert,
-				"tbsCertificate.subjectPublicKeyInfo", key,
-				&crt->raw_spki);
+				"tbsCertificate.subjectPublicKeyInfo",
+				&key->params, &crt->raw_spki);
 			if (result != 0) {
 				gnutls_assert();
 				return result;

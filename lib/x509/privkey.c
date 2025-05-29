@@ -1660,6 +1660,22 @@ int gnutls_x509_privkey_get_pk_algorithm(gnutls_x509_privkey_t key)
 	return key->params.algo;
 }
 
+static unsigned int _gnutls_privkey_get_bits(gnutls_x509_privkey_t key)
+{
+        unsigned int bits = 0;
+        const gnutls_crypto_pk_st *cc;
+
+        cc = _gnutls_get_crypto_pk(key->pk_algorithm);
+        if (cc != NULL && cc->get_bits != NULL) {
+                cc->get_bits(key->pk_ctx, &bits);
+        }
+        else {
+		bits = _gnutls_privkey_get_bits(key);
+        }
+
+        return bits;
+}
+
 /**
  * gnutls_x509_privkey_get_pk_algorithm2:
  * @key: should contain a #gnutls_x509_privkey_t type
@@ -1682,7 +1698,7 @@ int gnutls_x509_privkey_get_pk_algorithm2(gnutls_x509_privkey_t key,
 	}
 
 	if (bits) {
-		ret = pubkey_to_bits(&key->params);
+		ret = _gnutls_privkey_get_bits(key);
 		if (ret < 0)
 			ret = 0;
 		*bits = ret;
@@ -1973,7 +1989,7 @@ gnutls_sec_param_t gnutls_x509_privkey_sec_param(gnutls_x509_privkey_t key)
 {
 	int bits;
 
-	bits = pubkey_to_bits(&key->params);
+	bits = _gnutls_privkey_get_bits(key);
 	if (bits <= 0)
 		return GNUTLS_SEC_PARAM_UNKNOWN;
 
@@ -2794,8 +2810,8 @@ int gnutls_x509_privkey_get_key_id(gnutls_x509_privkey_t key,
 
 	cc = _gnutls_get_crypto_pk(key->pk_algorithm);
         if (cc != NULL && cc->export_pubkey_backend != NULL) {
-		ret = _gnutls_get_key_id_provider(key, output_data,
-						  output_data_size, flags);
+		ret = _gnutls_get_key_id_provider(&key->params, key->pk_ctx,
+			output_data, output_data_size, flags);
 	} else {
 		ret = _gnutls_get_key_id(&key->params, output_data,
 					 output_data_size, flags);

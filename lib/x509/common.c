@@ -1098,7 +1098,7 @@ int _gnutls_x509_encode_and_copy_PKI_params(asn1_node dst, const char *dst_name,
  */	     
 int _gnutls_x509_encode_with_PKI_params(asn1_node dst,
 					const char *dst_name,
-					gnutls_x509_privkey_t key,
+					gnutls_pk_params_st *params,
 					gnutls_datum_t *pubkey)
 {	       
 	const char *oid;  
@@ -1106,7 +1106,7 @@ int _gnutls_x509_encode_with_PKI_params(asn1_node dst,
 	int result;     
 	char name[128]; 
 		
-	oid = gnutls_pk_get_oid(key->params.algo);
+	oid = gnutls_pk_get_oid(params->algo);
 	if (oid == NULL) {
 		gnutls_assert();
 		return GNUTLS_E_UNKNOWN_PK_ALGORITHM;
@@ -1123,7 +1123,7 @@ int _gnutls_x509_encode_with_PKI_params(asn1_node dst,
 		return _gnutls_asn2err(result);
 	}
  
-	result = _gnutls_x509_write_pubkey_params(&key->params, &der);
+	result = _gnutls_x509_write_pubkey_params(params, &der);
 	if (result < 0) {
 		gnutls_assert();
 		return result;
