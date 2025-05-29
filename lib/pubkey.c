@@ -417,6 +417,7 @@ static unsigned int _gnutls_pubkey_get_bits(gnutls_pubkey_t key)
 {
 	unsigned int bits = 0;
 	const gnutls_crypto_pk_st *cc; 
+
 	cc = _gnutls_get_crypto_pk(key->pk_algorithm);
 	if (cc != NULL && cc->get_bits != NULL) {
 		cc->get_bits(key->pk_ctx, &bits);
@@ -1143,14 +1144,22 @@ int gnutls_pubkey_get_key_id(gnutls_pubkey_t key, unsigned int flags,
 			     size_t *output_data_size)
 {
 	int ret = 0;
+	const gnutls_crypto_pk_st *cc;
 
 	if (key == NULL) {
 		gnutls_assert();
 		return GNUTLS_E_INVALID_REQUEST;
 	}
 
-	ret = _gnutls_get_key_id(&key->params, output_data, output_data_size,
-				 flags);
+        cc = _gnutls_get_crypto_pk(key->pk_algorithm);
+        if (cc != NULL) {
+		ret = _gnutls_get_key_id_provider(&key->params, key->pk_ctx,
+			output_data, output_data_size,flags);
+	} else {
+
+		ret = _gnutls_get_key_id(&key->params, output_data,
+					 output_data_size, flags);
+	}
 	if (ret < 0) {
 		gnutls_assert();
 		return ret;
@@ -2488,34 +2497,33 @@ int gnutls_pubkey_import_dh_raw(gnutls_pubkey_t key,
 				const gnutls_datum_t *y)
 {
 	int ret;
-
-	int result;
-
-	key->params.algo = GNUTLS_PK_DH;
-	key->bits = pubkey_to_bits(&key->params);
-
-	key->pk_algorithm = GNUTLS_PK_DH;
-	const gnutls_crypto_pk_st *cc =
-		_gnutls_get_crypto_pk(key->pk_algorithm);
-
-	if (cc != NULL && cc->import_pubkey_x509_backend != NULL) {
-		gnutls_pk_algorithm_t algo;
-
-		result = cc->import_pubkey_x509_backend(&key->pk_ctx, &algo, NULL, GNUTLS_X509_FMT_DER, y, NULL);
-		key->pk_algorithm = algo;
-		key->params.algo = algo;
-
-		if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
-			gnutls_assert();
-			return result;
-		} else if (result == 0) {
-			return 0;
-		}
-	}
+	const gnutls_crypto_pk_st *cc;
 
 	if (unlikely(key == NULL || params == NULL || y == NULL)) {
 		return gnutls_assert_val(GNUTLS_E_INVALID_REQUEST);
 	}
+
+	cc = _gnutls_get_crypto_pk(key->pk_algorithm);
+	if (cc != NULL && cc->import_pubkey_x509_backend != NULL) {
+		gnutls_pk_algorithm_t algo;
+
+		ret = cc->import_pubkey_x509_backend(&key->pk_ctx, &algo, NULL,
+			GNUTLS_X509_FMT_DER, y, NULL);
+		key->pk_algorithm = algo;
+		key->params.algo = algo;
+		key->bits = _gnutls_pubkey_get_bits(key);
+
+		if (ret < 0 && ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
+			gnutls_assert();
+			return ret;
+		} else if (ret == 0) {
+			return 0;
+		}
+	}
+
+	key->params.algo = GNUTLS_PK_DH;
+	key->pk_algorithm = GNUTLS_PK_DH;
+	key->bits = pubkey_to_bits(&key->params);
 
 	gnutls_pk_params_release(&key->params);
 	gnutls_pk_params_init(&key->params);
