@@ -2800,7 +2800,7 @@ int gnutls_x509_privkey_get_key_id(gnutls_x509_privkey_t key,
 				   unsigned char *output_data,
 				   size_t *output_data_size)
 {
-	int ret;
+	int ret = GNUTLS_E_ALGO_NOT_SUPPORTED;
 	const gnutls_crypto_pk_st *cc;
 
 	if (key == NULL) {
@@ -2812,7 +2812,8 @@ int gnutls_x509_privkey_get_key_id(gnutls_x509_privkey_t key,
         if (cc != NULL && cc->export_pubkey_backend != NULL) {
 		ret = _gnutls_get_key_id_provider(&key->params, key->pk_ctx,
 			output_data, output_data_size, flags);
-	} else {
+	}
+	if (ret == GNUTLS_E_ALGO_NOT_SUPPORTED) {
 		ret = _gnutls_get_key_id(&key->params, output_data,
 					 output_data_size, flags);
 	}
