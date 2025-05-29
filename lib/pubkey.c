@@ -389,6 +389,7 @@ int gnutls_pubkey_import_privkey(gnutls_pubkey_t key, gnutls_privkey_t pkey,
 	gnutls_pk_params_init(&key->params);
 
 	key->key_usage = usage;
+	key->pk_algorithm = pkey->pk_algorithm;
 	key->params.algo = pkey->pk_algorithm;
 
 	cc = _gnutls_get_crypto_pk(pkey->pk_algorithm);
@@ -401,8 +402,6 @@ int gnutls_pubkey_import_privkey(gnutls_pubkey_t key, gnutls_privkey_t pkey,
 			gnutls_pubkey_deinit(pub);
 			return ret;
 		}
-		key->pk_algorithm = pub->pk_algorithm;
-		key->params.algo = pub->pk_algorithm;
 		key->params.curve = pub->params.curve;
 		ret = cc->copy_backend(&key->pk_ctx, pub->pk_ctx,
 				       pub->pk_algorithm);
@@ -2125,6 +2124,7 @@ int gnutls_pubkey_import_rsa_raw(gnutls_pubkey_t key, const gnutls_datum_t *m,
 			return gnutls_assert_val(ret);
 		}
                 if (ret == 0) {
+			key->pk_algorithm = GNUTLS_PK_RSA;
 			key->params.algo = GNUTLS_PK_RSA;
 			return 0;
 		}
@@ -2307,47 +2307,47 @@ int gnutls_pubkey_import_ecc_x962(gnutls_pubkey_t key,
 				  const gnutls_datum_t *ecpoint)
 {
 	int ret;
-	gnutls_datum_t raw_point = { NULL, 0 };
+	gnutls_ecc_curve_t curve;
+	gnutls_datum_t raw_point;
+	gnutls_datum_t x;
+	gnutls_datum_t y;
 
 	if (key == NULL) {
 		gnutls_assert();
 		return GNUTLS_E_INVALID_REQUEST;
 	}
 
-	gnutls_pk_params_release(&key->params);
-	gnutls_pk_params_init(&key->params);
-
-	key->params.params_nr = 0;
-
 	ret = _gnutls_x509_read_ecc_params(parameters->data, parameters->size,
-					   &key->params.curve);
+					   &curve);
 	if (ret < 0) {
 		gnutls_assert();
-		goto cleanup;
+		return ret;
 	}
 
-	ret = _gnutls_x509_decode_string(ASN1_ETYPE_OCTET_STRING, ecpoint->data,
-					 ecpoint->size, &raw_point, 0);
+        ret = _gnutls_x509_decode_string(ASN1_ETYPE_OCTET_STRING, ecpoint->data,
+                                         ecpoint->size, &raw_point, 0);
 	if (ret < 0) {
 		gnutls_assert();
-		goto cleanup;
+		return ret;
 	}
 
-	ret = _gnutls_ecc_ansi_x962_import(raw_point.data, raw_point.size,
-					   &key->params.params[ECC_X],
-					   &key->params.params[ECC_Y]);
+	/* Must have odd length and start with 0x04. */
+	if ((raw_point.size & 1) != 1 || raw_point.data[0] != 0x04) {
+		gnutls_assert();
+		gnutls_free(raw_point.data);
+		return GNUTLS_E_INVALID_REQUEST;
+	}
+
+	x.data = &raw_point.data[1];
+	x.size = raw_point.size / 2;
+	y.data = &raw_point.data[1 + x.size];
+	y.size = x.size;
+
+	ret = gnutls_pubkey_import_ecc_raw(key, curve, &x, &y);
 	if (ret < 0) {
 		gnutls_assert();
-		goto cleanup;
 	}
-	key->params.params_nr += 2;
-	key->params.algo = GNUTLS_PK_EC;
 
-	gnutls_free(raw_point.data);
-	return 0;
-
-cleanup:
-	gnutls_pk_params_release(&key->params);
 	gnutls_free(raw_point.data);
 	return ret;
 }
