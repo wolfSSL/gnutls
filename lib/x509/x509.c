@@ -3213,6 +3213,10 @@ int _gnutls_get_key_id_provider(gnutls_pk_params_st *params,
 	gnutls_digest_algorithm_t hash = GNUTLS_DIG_SHA1;
 	unsigned int digest_len;
 
+	if (pk_ctx == NULL) {
+		return GNUTLS_E_ALGO_NOT_SUPPORTED;
+	}
+
 	if ((flags & GNUTLS_KEYID_USE_SHA512) ||
 	    (flags & GNUTLS_KEYID_USE_BEST_KNOWN))
 		hash = GNUTLS_DIG_SHA512;

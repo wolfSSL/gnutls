@@ -383,7 +383,7 @@ int gnutls_pubkey_import_privkey(gnutls_pubkey_t key, gnutls_privkey_t pkey,
 				 unsigned int usage, unsigned int flags)
 {
 	const gnutls_crypto_pk_st *cc;
-	int result;
+	int ret;
 
 	gnutls_pk_params_release(&key->params);
 	gnutls_pk_params_init(&key->params);
@@ -392,21 +392,41 @@ int gnutls_pubkey_import_privkey(gnutls_pubkey_t key, gnutls_privkey_t pkey,
 	key->params.algo = pkey->pk_algorithm;
 
 	cc = _gnutls_get_crypto_pk(pkey->pk_algorithm);
-	if (cc != NULL && cc->export_pubkey_backend != NULL) {
+	if (pkey->type == GNUTLS_PRIVKEY_PKCS11 && cc != NULL &&
+	    cc->copy_backend != NULL) {
+		gnutls_pubkey_t pub;
+		ret = _pkcs11_privkey_get_pubkey(pkey->key.pkcs11, &pub, 0);
+		if (ret < 0) {
+			gnutls_assert();
+			gnutls_pubkey_deinit(pub);
+			return ret;
+		}
+		key->pk_algorithm = pub->pk_algorithm;
+		key->params.algo = pub->pk_algorithm;
+		key->params.curve = pub->params.curve;
+		ret = cc->copy_backend(&key->pk_ctx, pub->pk_ctx,
+				       pub->pk_algorithm);
+		gnutls_pubkey_deinit(pub);
+		if (ret < 0) {
+			gnutls_assert();
+			return ret;
+		}
+		return ret;
+	} else if (cc != NULL && cc->export_pubkey_backend != NULL) {
 		gnutls_datum_t datum;
 		key->pk_algorithm = pkey->pk_algorithm;
 		key->params.algo = pkey->pk_algorithm;
 		key->params.curve = pkey->key.x509->params.curve;
-		result = cc->export_pubkey_backend(&key->pk_ctx, pkey->pk_ctx,
+		ret = cc->export_pubkey_backend(&key->pk_ctx, pkey->pk_ctx,
 						   &datum, 1);
-		if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
+		if (ret < 0 && ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
 			gnutls_assert();
-			return result;
-		} else if (result == 0) {
+			return ret;
+		} else if (ret == 0) {
 			gnutls_free(datum.data);
 			return 0;
-		} else if (result > 0 && gnutls_fips140_mode_enabled()) {
-			return result;
+		} else if (ret > 0 && gnutls_fips140_mode_enabled()) {
+			return ret;
 		}
 	}
 
@@ -2101,11 +2121,13 @@ int gnutls_pubkey_import_rsa_raw(gnutls_pubkey_t key, const gnutls_datum_t *m,
 	if (cc != NULL && cc->import_rsa_raw_backend != NULL) {
 		ret = cc->import_rsa_raw_backend(&key->pk_ctx, m, e, NULL,
 				NULL, NULL, NULL, NULL, NULL);
-		if (ret < 0) {
+		if (ret < 0 && ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
 			return gnutls_assert_val(ret);
 		}
-		key->params.algo = GNUTLS_PK_RSA;
-		return 0;
+                if (ret == 0) {
+			key->params.algo = GNUTLS_PK_RSA;
+			return 0;
+		}
 	}
 	gnutls_pk_params_release(&key->params);
 	gnutls_pk_params_init(&key->params);
