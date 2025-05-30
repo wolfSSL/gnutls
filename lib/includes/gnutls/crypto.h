@@ -266,7 +266,7 @@ typedef int (*gnutls_pk_get_spki_func)(void *ctx, void *spki);
 typedef int (*gnutls_pk_set_spki_func)(void *ctx, void *spki);
 typedef int (*gnutls_pk_generate_func)(void **ctx, const void *privkey,
                                           gnutls_pk_algorithm_t algo,
-                                          unsigned int bits, const void* p, const void* g, const void* q);
+                                          unsigned int bits, const void* p, const void* g, const void* q, gnutls_ecc_curve_t *curve);
 
 typedef int (*gnutls_pk_import_pubkey_func)(void **ctx,
 					    gnutls_pk_algorithm_t *algo,

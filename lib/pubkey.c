@@ -342,9 +342,35 @@ int gnutls_pubkey_import_x509_crq(gnutls_pubkey_t key, gnutls_x509_crq_t crq,
 				  unsigned int flags)
 {
 	int ret;
+    int result;
 
 	gnutls_pk_params_release(&key->params);
 	/* params initialized in _gnutls_x509_crq_get_mpis */
+
+	const gnutls_crypto_pk_st *cc;
+
+	cc = _gnutls_get_crypto_pk(crq->pk_algorithm);
+	if (cc != NULL && cc->export_pubkey_backend != NULL) {
+		gnutls_datum_t datum = {
+			.data = NULL,
+			.size = 0
+		};
+
+        /* does export of the public key from the crq, and imports it back to the
+         * key struct. */
+		result = cc->export_pubkey_backend(&key->pk_ctx, crq->pk_ctx,
+						   &datum, 0);
+		if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
+			gnutls_assert();
+			return result;
+		} else if (result == 0) {
+			if (result != 0) {
+				gnutls_assert();
+				return result;
+			}
+			return 0;
+		}
+	}
 
 	key->params.algo = gnutls_x509_crq_get_pk_algorithm(crq, &key->bits);
 
