@@ -2418,6 +2418,7 @@ int gnutls_x509_privkey_generate2(gnutls_x509_privkey_t key,
 		key->pk_algorithm = algo;
 
 		gnutls_datum_t p, g, q;
+        gnutls_ecc_curve_t curve;
 
 		q.size = 0;
 
@@ -2457,14 +2458,17 @@ int gnutls_x509_privkey_generate2(gnutls_x509_privkey_t key,
 			}
 		}
 
-		result = cc->generate_backend(&key->pk_ctx, key, algo,
-					      bits_copy, &p, &g, &q);
+		result = cc->generate_backend(&key->pk_ctx, key, algo, bits_copy, &p,
+					      &g, &q, &curve);
 		if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
 			gnutls_assert();
 			return result;
 		} else if (result == 0) {
 			cc->privkey_export_ecdh_raw_backend(key->pk_ctx,
 				&key->params.curve, NULL, NULL, NULL, 0);
+            if (algo == GNUTLS_PK_EC) {
+                key->params.curve = curve;
+            }
 			return 0;
 		}
 	}

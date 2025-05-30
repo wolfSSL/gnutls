@@ -661,14 +661,14 @@ int gnutls_x509_crq_set_key(gnutls_x509_crq_t crq, gnutls_x509_privkey_t key)
 			return result;
 		} else if (result == 0) {
 			crq->pk_algorithm = key->pk_algorithm;
-                        result = _gnutls_x509_encode_with_PKI_params(crq->crq,
-                                "certificationRequestInfo.subjectPKInfo",
-				&key->params, &datum);
-                        gnutls_free(datum.data);
-                        if (result != 0) {
-                                gnutls_assert();
-                                return result;
-                        }
+			result = _gnutls_x509_encode_with_PKI_params(crq->crq,
+					"certificationRequestInfo.subjectPKInfo",
+					&key->params, &datum);
+			gnutls_free(datum.data);
+			if (result != 0) {
+				gnutls_assert();
+				return result;
+			}
 			return 0;
 		}
 	}
