@@ -301,10 +301,12 @@ int gnutls_pubkey_import_x509(gnutls_pubkey_t key, gnutls_x509_crt_t crt,
 		return ret;
 	}
 
-	ret = _gnutls_pubkey_import_x509_provider(key, &crt->der, flags);
-	if (ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
-		return ret;
-	}
+    if (crt->der.size > 0) {
+        ret = _gnutls_pubkey_import_x509_provider(key, &crt->der, flags);
+        if (ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
+            return ret;
+        }
+    }
 
 	gnutls_pk_params_release(&key->params);
 	/* params initialized in _gnutls_x509_crt_get_mpis */
