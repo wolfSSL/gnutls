@@ -3319,26 +3319,28 @@ int gnutls_x509_crt_get_key_id(gnutls_x509_crt_t crt, unsigned int flags,
 
 	cc = _gnutls_get_crypto_pk(crt->pk_algorithm);
 	if (cc != NULL) {
-		ret = gnutls_pubkey_init(&pubkey);
-		if (ret < 0) {
-			gnutls_assert();
-			return ret;
-		}
-		ret = gnutls_pubkey_import_x509(pubkey, crt, 0);
-		if (ret < 0) {
-			gnutls_pubkey_deinit(pubkey);
-			gnutls_assert();
-			return ret;
-		}
-		cc = _gnutls_get_crypto_pk(pubkey->params.algo);
-		if (cc != NULL) {
-			ret = _gnutls_get_key_id_provider(&pubkey->params,
-				pubkey->pk_ctx, output_data, output_data_size,
-				flags);
-			gnutls_pubkey_deinit(pubkey);
+        if (crt->der.size > 0 || crt->raw_spki.size > 0) {
+            ret = gnutls_pubkey_init(&pubkey);
+            if (ret < 0) {
+                gnutls_assert();
+                return ret;
+            }
+            ret = gnutls_pubkey_import_x509(pubkey, crt, 0);
+            if (ret < 0) {
+                gnutls_pubkey_deinit(pubkey);
+                gnutls_assert();
+                return ret;
+            }
+            cc = _gnutls_get_crypto_pk(pubkey->params.algo);
+            if (cc != NULL) {
+                ret = _gnutls_get_key_id_provider(&pubkey->params,
+                        pubkey->pk_ctx, output_data, output_data_size,
+                        flags);
+                gnutls_pubkey_deinit(pubkey);
 
-			return ret;
-		}
+                return ret;
+            }
+        }
 	}
 
 	/* initializes params */
