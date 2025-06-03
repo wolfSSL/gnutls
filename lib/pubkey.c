@@ -1856,7 +1856,7 @@ cleanup:
  **/
 int gnutls_x509_crt_set_pubkey(gnutls_x509_crt_t crt, gnutls_pubkey_t key)
 {
-	int result;
+	int result = GNUTLS_E_ALGO_NOT_SUPPORTED;
 	const gnutls_crypto_pk_st *cc;
 
 	if (crt == NULL) {
@@ -1866,28 +1866,27 @@ int gnutls_x509_crt_set_pubkey(gnutls_x509_crt_t crt, gnutls_pubkey_t key)
 
 	cc = _gnutls_get_crypto_pk(key->pk_algorithm);
 	if (cc != NULL && cc->export_pubkey_backend != NULL) {
-		gnutls_datum_t datum = {
-			.data = NULL,
-			.size = 0
-		};
-
 		result = cc->export_pubkey_backend(&crt->pk_ctx, key->pk_ctx,
-						   &datum, 1);
+						   &crt->raw_spki, 0);
 		if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
 			gnutls_assert();
 			return result;
 		} else if (result == 0) {
-			gnutls_free(datum.data);
+			result = _gnutls_x509_encode_with_PKI_params(crt->cert,
+				"tbsCertificate.subjectPublicKeyInfo",
+				&key->params, &crt->raw_spki);
 			return 0;
 		}
 	}
 
-	result = _gnutls_x509_encode_and_copy_PKI_params(
-		crt->cert, "tbsCertificate.subjectPublicKeyInfo", &key->params);
+	if (result == GNUTLS_E_ALGO_NOT_SUPPORTED) {
+		result = _gnutls_x509_encode_and_copy_PKI_params(crt->cert,
+			"tbsCertificate.subjectPublicKeyInfo", &key->params);
 
-	if (result < 0) {
-		gnutls_assert();
-		return result;
+		if (result < 0) {
+			gnutls_assert();
+			return result;
+		}
 	}
 
 	if (key->key_usage)

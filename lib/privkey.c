@@ -1376,23 +1376,6 @@ int gnutls_privkey_sign_hash2(gnutls_privkey_t signer,
 	int result;
 	const gnutls_crypto_pk_st *cc;
 
-	cc = _gnutls_get_crypto_pk(signer->pk_algorithm);
-	if (cc != NULL && cc->sign_hash_backend != NULL) {
-		se = _gnutls_sign_to_entry(algo);
-		gnutls_digest_algorithm_t hash = se->hash;
-		result = cc->sign_hash_backend(signer->pk_ctx,
-			&signer->key.x509->params.raw_priv, hash, hash_data,
-			signature, flags, algo, &params);
-		if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
-			gnutls_assert();
-			return result;
-		} else if (result == 0) {
-			return 0;
-		} else if (result > 0 && gnutls_fips140_mode_enabled()) {
-			return result;
-		}
-	}
-
 	if (flags & GNUTLS_PRIVKEY_SIGN_FLAG_TLS1_RSA) {
 		/* the corresponding signature algorithm is SIGN_RSA_RAW,
 		 * irrespective of hash algorithm. */
@@ -1416,6 +1399,23 @@ int gnutls_privkey_sign_hash2(gnutls_privkey_t signer,
 	if (ret < 0) {
 		gnutls_assert();
 		goto cleanup;
+	}
+
+	cc = _gnutls_get_crypto_pk(signer->pk_algorithm);
+	if (cc != NULL && cc->sign_hash_backend != NULL) {
+		se = _gnutls_sign_to_entry(algo);
+		gnutls_digest_algorithm_t hash = se->hash;
+		result = cc->sign_hash_backend(signer->pk_ctx,
+			&signer->key.x509->params.raw_priv, hash, hash_data,
+			signature, flags, algo, &params);
+		if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
+			gnutls_assert();
+			return result;
+		} else if (result == 0) {
+			return 0;
+		} else if (result > 0 && gnutls_fips140_mode_enabled()) {
+			return result;
+		}
 	}
 
 	FIX_SIGN_PARAMS(params, flags, se->hash);
@@ -1642,8 +1642,7 @@ static int privkey_sign_x509_raw_data_provider(gnutls_privkey_t key,
 	cc = _gnutls_get_crypto_pk(key->pk_algorithm);
 	if (cc != NULL && cc->sign_hash_backend != NULL) {
 		result = cc->sign_hash_backend(key->pk_ctx, NULL,
-			GNUTLS_DIG_UNKNOWN, data, signature, 0,
-			GNUTLS_SIGN_UNKNOWN, params);
+			se->hash, data, signature, 0, se->id, params);
 		if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
 			gnutls_assert();
 		}
