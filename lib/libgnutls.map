@@ -1451,6 +1451,7 @@ GNUTLS_3_8_6
 	gnutls_pkcs12_generate_mac3;
 	gnutls_hash_squeeze;
 	gnutls_prf_gen;
+	_gnutls_config_is_rsa_pkcs1_encrypt_allowed;
  local:
 	*;
 } GNUTLS_3_8_4;

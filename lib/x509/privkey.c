@@ -2448,8 +2448,8 @@ int gnutls_x509_privkey_generate2(gnutls_x509_privkey_t key,
 			}
 
 			if (dh_params_copy->params[2] != NULL) {
-				ret = _gnutls_mpi_dprint(dh_params_copy->params[2],
-							 &q);
+				ret = _gnutls_mpi_dprint(
+					dh_params_copy->params[2], &q);
 				if (ret < 0) {
 					gnutls_assert();
 					return ret;
@@ -2457,12 +2457,14 @@ int gnutls_x509_privkey_generate2(gnutls_x509_privkey_t key,
 			}
 		}
 
-		result = cc->generate_backend(&key->pk_ctx, key, algo, bits_copy, &p,
-					      &g, &q);
+		result = cc->generate_backend(&key->pk_ctx, key, algo,
+					      bits_copy, &p, &g, &q);
 		if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
 			gnutls_assert();
 			return result;
 		} else if (result == 0) {
+			cc->privkey_export_ecdh_raw_backend(key->pk_ctx,
+				&key->params.curve, NULL, NULL, NULL, 0);
 			return 0;
 		}
 	}

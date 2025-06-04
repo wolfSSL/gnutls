@@ -33,7 +33,9 @@
 #include <gnutls/gnutls.h>
 #include "utils.h"
 #include "common-cert-key-exchange.h"
+#ifndef GNUTLS_WOLFSSL
 #include "cert-repro-20170915.h"
+#endif
 
 void doit(void)
 {
