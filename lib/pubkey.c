@@ -296,10 +296,12 @@ int gnutls_pubkey_import_x509(gnutls_pubkey_t key, gnutls_x509_crt_t crt,
 	if (ret < 0)
 		key->key_usage = 0;
 
-	ret = _gnutls_pubkey_import_spki_provider(key, &crt->raw_spki);
-	if (ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
-		return ret;
-	}
+    if (crt->raw_spki.size > 0) {
+        ret = _gnutls_pubkey_import_spki_provider(key, &crt->raw_spki);
+        if (ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
+            return ret;
+        }
+    }
 
     if (crt->der.size > 0) {
         ret = _gnutls_pubkey_import_x509_provider(key, &crt->der, flags);
