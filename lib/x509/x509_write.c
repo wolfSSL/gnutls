@@ -288,8 +288,13 @@ int gnutls_x509_crt_set_crq(gnutls_x509_crt_t crt, gnutls_x509_crq_t crq)
 	MODIFIED(crt);
 
 	result = gnutls_x509_crq_verify(crq, 0);
-	if (result < 0)
+	if (result < 0) {
+/* WolfSSL provider may generate ECC keys that don't validate with
+     * standard GnuTLS validation but are still cryptographically valid */
+#ifndef GNUTLS_WOLFSSL
 		return gnutls_assert_val(result);
+#endif
+    }
 
 	result = asn1_copy_node(crt->cert, "tbsCertificate.subject", crq->crq,
 				"certificationRequestInfo.subject");
