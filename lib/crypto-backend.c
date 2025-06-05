@@ -128,6 +128,7 @@ static const void *_get_algo(algo_list *al, int algo)
 static cipher_list glob_cl = { GNUTLS_CIPHER_NULL, 0, NULL, 0, NULL };
 static mac_list glob_ml = { GNUTLS_MAC_NULL, 0, NULL, 0, NULL };
 static digest_list glob_dl = { GNUTLS_MAC_NULL, 0, NULL, 0, NULL };
+static algo_list glob_pk = { GNUTLS_PK_UNKNOWN, 0, NULL, 0, NULL };
 
 static void _deregister(algo_list *cl)
 {
@@ -151,6 +152,7 @@ void _gnutls_crypto_deregister(void)
 	_deregister(&glob_cl);
 	_deregister(&glob_ml);
 	_deregister(&glob_dl);
+	_deregister(&glob_pk);
 }
 
 extern gnutls_crypto_cipher_st _gnutls_cipher_ops;
@@ -682,7 +684,6 @@ int gnutls_load_crypto_provider(const char *provider_path)
     return 0;
 }
 
-static algo_list glob_pk = { GNUTLS_PK_UNKNOWN, 0, NULL, 0, NULL };
 
 /* Registration function for public key algorithms */
 int gnutls_crypto_single_pk_register(gnutls_pk_algorithm_t algorithm,
