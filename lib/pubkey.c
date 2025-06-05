@@ -220,8 +220,10 @@ static int _gnutls_pubkey_import_spki_provider(gnutls_pubkey_t key,
 	/* now that we know the algorithm, we copy the context to the registered
 	 * crypto backend to that same algorithm */
 	if (cc->copy_backend != NULL) {
-		result = cc->copy_backend(&key->pk_ctx, key->pk_ctx,
+		void *copy_pk_ctx = NULL;
+		result = cc->copy_backend(&copy_pk_ctx, key->pk_ctx,
 					  key->pk_algorithm);
+		cc->deinit_backend(copy_pk_ctx);
 		if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
 			gnutls_assert();
 		}
