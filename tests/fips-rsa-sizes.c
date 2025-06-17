@@ -44,21 +44,18 @@ void generate_successfully(gnutls_privkey_t *privkey, gnutls_pubkey_t *pubkey,
 	fprintf(stderr, "%d-bit\n", size);
 
 	/* x509 generation as well just because why not */
-	
 	assert(gnutls_x509_privkey_init(&xprivkey) == 0);
 	ret = gnutls_x509_privkey_generate(xprivkey, GNUTLS_PK_RSA, size, 0);
 	if (ret != GNUTLS_E_SUCCESS)
 		fail("%d-bit x509_privkey_init (%d)\n", size, ret);
 	gnutls_x509_privkey_deinit(xprivkey);
 
-	
 	assert(gnutls_privkey_init(privkey) == 0);
 	ret = gnutls_privkey_generate(*privkey, GNUTLS_PK_RSA, size, 0);
 	if (ret != GNUTLS_E_SUCCESS)
 		fail("%d-bit privkey_init (%d)\n", size, ret);
 
 	assert(gnutls_pubkey_init(pubkey) == 0);
-	
 	ret = gnutls_pubkey_import_privkey(*pubkey, *privkey,
 					   GNUTLS_KEY_DIGITAL_SIGNATURE, 0);
 	if (ret != GNUTLS_E_SUCCESS)
@@ -75,7 +72,6 @@ void generate_unsuccessfully(gnutls_privkey_t *privkey, gnutls_pubkey_t *pubkey,
 	fprintf(stderr, "%d-bit\n", size);
 
 	/* short x509 generation: ERROR, blocked */
-	
 	assert(gnutls_x509_privkey_init(&xprivkey) == 0);
 	ret = gnutls_x509_privkey_generate(xprivkey, GNUTLS_PK_RSA, size, 0);
 	if (ret != GNUTLS_E_PK_GENERATION_ERROR)
@@ -83,7 +79,6 @@ void generate_unsuccessfully(gnutls_privkey_t *privkey, gnutls_pubkey_t *pubkey,
 	gnutls_x509_privkey_deinit(xprivkey);
 
 	/* short key generation: ERROR, blocked */
-	
 	assert(gnutls_privkey_init(privkey) == 0);
 	ret = gnutls_privkey_generate(*privkey, GNUTLS_PK_RSA, size, 0);
 	if (ret != GNUTLS_E_PK_GENERATION_ERROR)
@@ -126,14 +121,12 @@ void sign_verify_successfully(gnutls_privkey_t privkey, gnutls_pubkey_t pubkey)
 	};
 
 	/* RSA sign: approved */
-	
 	ret = gnutls_privkey_sign_data(privkey, GNUTLS_DIG_SHA256, 0,
 				       &plaintext, &signature);
 	if (ret < 0)
 		fail("gnutls_privkey_sign_data failed\n");
 
 	/* RSA verify: approved */
-	
 	ret = gnutls_pubkey_verify_data2(pubkey, GNUTLS_SIGN_RSA_SHA256, 0,
 					 &plaintext, &signature);
 	if (ret < 0)
@@ -153,14 +146,12 @@ void sign_verify_unsuccessfully(gnutls_privkey_t privkey,
 	};
 
 	/* small key RSA sign: not approved */
-	
 	ret = gnutls_privkey_sign_data(privkey, GNUTLS_DIG_SHA256, 0,
 				       &plaintext, &signature);
 	if (ret < 0)
 		fail("gnutls_privkey_sign_data failed\n");
 
 	/* small key RSA verify: not approved */
-	
 	ret = gnutls_pubkey_verify_data2(pubkey, GNUTLS_SIGN_RSA_SHA256, 0,
 					 &plaintext, &signature);
 	if (ret < 0)
@@ -180,7 +171,6 @@ void nosign_verify(gnutls_privkey_t privkey, gnutls_pubkey_t pubkey)
 	};
 
 	/* 1024, 1280, 1536, 1792 key RSA sign: not approved */
-	
 	ret = gnutls_privkey_sign_data(privkey, GNUTLS_DIG_SHA256, 0,
 				       &plaintext, &signature);
 	if (ret < 0)
@@ -199,7 +189,6 @@ void nosign_verify(gnutls_privkey_t privkey, gnutls_pubkey_t pubkey)
 	assert(gnutls_fips140_mode_enabled());
 
 	/* 1024, 1280, 1536, 1792 key RSA verify: approved (exception) */
-	
 	ret = gnutls_pubkey_verify_data2(pubkey, GNUTLS_SIGN_RSA_SHA256, 0,
 					 &plaintext, &signature);
 	if (ret < 0)
@@ -242,7 +231,7 @@ void doit(void)
 	sign_verify_unsuccessfully(privkey, pubkey);
 
 	/* 1024-bit RSA: generate, sign, verify */
-    generate_successfully(&privkey, &pubkey, 1024);
+	generate_successfully(&privkey, &pubkey, 1024);
 	sign_verify_successfully(privkey, pubkey);
 	/* 2048-bit RSA: generate, sign, verify */
 	generate_successfully(&privkey, &pubkey, 2048);

@@ -787,6 +787,11 @@ void _gnutls_lib_force_operational(void)
 	_gnutls_switch_lib_state(LIB_STATE_OPERATIONAL);
 }
 
+int _gnutls_have_lib_error(void)
+{
+	return HAVE_LIB_ERROR();
+}
+
 /**
  * gnutls_fips140_context_init:
  * @context: location to store @gnutls_fips140_context_t

@@ -423,13 +423,8 @@ int _gnutls_x509_write_ecc_params(const gnutls_ecc_curve_t curve,
 	der->size = 0;
 
 	oid = gnutls_ecc_curve_get_oid(curve);
-	if (oid == NULL) {
-			// Add debug logging here to see the curve value
-			_gnutls_debug_log("ECC curve value: %d (0x%x), name: %s\n",
-					(int)curve, (unsigned int)curve,
-					gnutls_ecc_curve_get_name(curve) ?: "UNKNOWN");
+	if (oid == NULL)
 		return gnutls_assert_val(GNUTLS_E_INVALID_REQUEST);
-    }
 
 	if ((result = asn1_create_element(_gnutls_get_gnutls_asn(),
 					  "GNUTLS.ECParameters", &spk)) !=

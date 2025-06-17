@@ -52,25 +52,13 @@ int _gnutls_x509_crt_get_spki_params(gnutls_x509_crt_t crt,
 				     const gnutls_x509_spki_t key_params,
 				     gnutls_x509_spki_t params)
 {
-	int result = 0;
+	int result;
 	gnutls_x509_spki_st crt_params;
-	const gnutls_crypto_pk_st *cc;
 
-        cc = _gnutls_get_crypto_pk(GNUTLS_PK_RSA);
-        if (cc != NULL && cc->get_spki != NULL) {
-                result = cc->get_spki(crt->pk_ctx, &crt_params);
-                if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
-                        gnutls_assert();
-                        return result;
-                }
-        }
-
-	if (result != 0) {
-		result = _gnutls_x509_crt_read_spki_params(crt, &crt_params);
-		if (result < 0) {
-			gnutls_assert();
-			return result;
-		}
+	result = _gnutls_x509_crt_read_spki_params(crt, &crt_params);
+	if (result < 0) {
+		gnutls_assert();
+		return result;
 	}
 
 	if (crt_params.pk == GNUTLS_PK_RSA_PSS) {
@@ -194,28 +182,8 @@ int _gnutls_x509_pkix_sign(asn1_node src, const char *src_name,
 		result = privkey_sign_raw_data(issuer_key, se, &tbs, &signature,
 					       &params);
 	} else {
-		const gnutls_crypto_pk_st *cc;
-
-		result = 1;
-		cc = _gnutls_get_crypto_pk(issuer_key->pk_algorithm);
-		if (cc != NULL && cc->sign_hash_backend != NULL) {
-			result = cc->sign_backend(issuer_key->pk_ctx,
-				&issuer_key->key.x509->params.raw_priv, dig, 1,
-				&tbs, &signature, 0,
-				GNUTLS_E_NO_SIGN_ALGORITHM_SET, &params);
-			if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
-				gnutls_assert();
-				return result;
-			} else if (result > 0 && gnutls_fips140_mode_enabled()) {
-				return result;
-			}
-		}
-
-		if (result != 0) {
-			result = privkey_sign_and_hash_data(issuer_key, se,
-							    &tbs, &signature,
-							    &params);
-		}
+		result = privkey_sign_and_hash_data(issuer_key, se, &tbs,
+						    &signature, &params);
 	}
 	gnutls_free(tbs.data);
 

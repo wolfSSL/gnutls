@@ -169,6 +169,7 @@ static int _gnutls_gen_rsa_psk_client_kx(gnutls_session_t session,
 			session->internals.rsa_pms_version[1];
 	}
 
+<<<<<<< HEAD
 	if (_gnutls_get_crypto_pk(GNUTLS_PK_RSA) != NULL) {
 		gnutls_pubkey_t pubkey;
         	if ((ret = gnutls_pubkey_init(&pubkey)) != 0) {
@@ -204,6 +205,15 @@ static int _gnutls_gen_rsa_psk_client_kx(gnutls_session_t session,
 
 		gnutls_pk_params_release(&params);
 	}
+
+	/* Encrypt premaster secret */
+	if ((ret = _gnutls_pk_encrypt(GNUTLS_PK_RSA, &sdata, &premaster_secret,
+				      &params)) < 0) {
+		gnutls_assert();
+		return ret;
+	}
+
+	gnutls_pk_params_release(&params);
 
 	cred = (gnutls_psk_client_credentials_t)_gnutls_get_cred(
 		session, GNUTLS_CRD_PSK);

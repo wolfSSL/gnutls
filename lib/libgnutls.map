@@ -1017,10 +1017,9 @@ GNUTLS_3_4
 	gnutls_crypto_register_aead_cipher;
 	gnutls_crypto_register_mac;
 	gnutls_crypto_register_digest;
-    gnutls_crypto_single_cipher_register;
-    gnutls_crypto_single_mac_register;
-    gnutls_crypto_single_digest_register;
-    gnutls_crypto_single_pk_register;
+	gnutls_crypto_single_cipher_register;
+	gnutls_crypto_single_mac_register;
+	gnutls_crypto_single_digest_register;
 	gnutls_ext_register;
 	gnutls_buffer_append_data;
 	gnutls_supplemental_register;
@@ -1451,6 +1450,10 @@ GNUTLS_3_8_6
 	gnutls_pkcs12_generate_mac3;
 	gnutls_hash_squeeze;
 	gnutls_prf_gen;
+	_gnutls_mpi_init_scan;
+	_gnutls_mpi_zrelease;
+	_gnutls_mpi_dprint;
+	_gnutls_have_lib_error;
 	_gnutls_config_is_rsa_pkcs1_encrypt_allowed;
  local:
 	*;

@@ -29,6 +29,7 @@
 #include "mpi.h"
 #include "random.h"
 #include "cipher_int.h"
+#include "pk.h"
 
 #ifdef ENABLE_PKCS11
 #include "pkcs11/p11_provider.h"
@@ -128,7 +129,6 @@ static const void *_get_algo(algo_list *al, int algo)
 static cipher_list glob_cl = { GNUTLS_CIPHER_NULL, 0, NULL, 0, NULL };
 static mac_list glob_ml = { GNUTLS_MAC_NULL, 0, NULL, 0, NULL };
 static digest_list glob_dl = { GNUTLS_MAC_NULL, 0, NULL, 0, NULL };
-static algo_list glob_pk = { GNUTLS_PK_UNKNOWN, 0, NULL, 0, NULL };
 
 static void _deregister(algo_list *cl)
 {
@@ -152,7 +152,6 @@ void _gnutls_crypto_deregister(void)
 	_deregister(&glob_cl);
 	_deregister(&glob_ml);
 	_deregister(&glob_dl);
-	_deregister(&glob_pk);
 }
 
 extern gnutls_crypto_cipher_st _gnutls_cipher_ops;
@@ -252,8 +251,6 @@ _gnutls_get_crypto_cipher(gnutls_cipher_algorithm_t algo)
 {
 	return _get_algo(&glob_cl, algo);
 }
-
-
 
 /**
  * gnutls_crypto_register_cipher:
@@ -595,6 +592,17 @@ int gnutls_crypto_register_mac(gnutls_mac_algorithm_t algorithm, int priority,
 	return 0;
 }
 
+int gnutls_crypto_pk_register(int priority, const gnutls_crypto_pk_st *s)
+{
+	if (crypto_pk_prio >= priority) {
+		memcpy(&_gnutls_pk_ops, s, sizeof(*s));
+		crypto_pk_prio = priority;
+		return 0;
+	}
+
+	return GNUTLS_E_CRYPTO_ALREADY_REGISTERED;
+}
+
 /**
  * gnutls_crypto_register_digest:
  * @algorithm: is the gnutls digest identifier
@@ -647,6 +655,14 @@ int gnutls_load_crypto_provider(const char *provider_path)
     }
 
     {
+        typedef gnutls_crypto_pk_st*(*pk_ops_func)(void);
+        pk_ops_func func = (pk_ops_func)dlsym(handle, "gnutls_get_pk_ops");
+        if (func != NULL) {
+            gnutls_crypto_pk_register(80, func());
+        }
+    }
+
+    {
         typedef gnutls_crypto_rnd_st*(*rnd_ops_func)(void);
         rnd_ops_func func = (rnd_ops_func)dlsym(handle, "gnutls_get_rnd_ops");
         if (func != NULL) {
@@ -684,19 +700,3 @@ int gnutls_load_crypto_provider(const char *provider_path)
     return 0;
 }
 
-
-/* Registration function for public key algorithms */
-int gnutls_crypto_single_pk_register(gnutls_pk_algorithm_t algorithm,
-                                    int priority,
-                                    const gnutls_crypto_pk_st *s,
-                                    int free_s)
-{
-    return _algo_register(&glob_pk, algorithm, priority, (void *)s, free_s);
-}
-
-/* Retrieval function for public key algorithms */
-const gnutls_crypto_pk_st *
-_gnutls_get_crypto_pk(gnutls_pk_algorithm_t algo)
-{
-    return _get_algo(&glob_pk, algo);
-}

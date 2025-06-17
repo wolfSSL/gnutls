@@ -24,6 +24,9 @@
 : ${DIFF=diff}
 OUTFILE=provable-privkey$$.tmp
 
+# wolfSSL doesn't support provable RSA
+exit 77
+
 if ! test -x "${CERTTOOL}"; then
 	exit 77
 fi

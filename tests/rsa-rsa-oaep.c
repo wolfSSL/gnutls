@@ -36,7 +36,6 @@
 /* This tests the key conversion from basic RSA to RSA-PSS.
  */
 
-#ifndef GNUTLS_WOLFSSL
 static void tls_log_func(int level, const char *str)
 {
 	fprintf(stderr, "<%d>| %s", level, str);
@@ -120,20 +119,16 @@ static void prepare_key(gnutls_privkey_t *priv, gnutls_digest_algorithm_t dig,
 					      NULL, 0) >= 0);
 	gnutls_free(tmp.data);
 }
-#endif
 
 void doit(void)
 {
-#ifndef GNUTLS_WOLFSSL
 	gnutls_privkey_t priv;
-#endif
 	int ret;
 
 	ret = global_init();
 	if (ret < 0)
 		fail("global_init: %d\n", ret);
 
-#ifndef GNUTLS_WOLFSSL
 	gnutls_global_set_log_function(tls_log_func);
 	if (debug)
 		gnutls_global_set_log_level(4711);
@@ -182,7 +177,6 @@ void doit(void)
 	gnutls_privkey_deinit(priv);
 
 	gnutls_fips140_context_deinit(fips_context);
-#endif
 
 	gnutls_global_deinit();
 }

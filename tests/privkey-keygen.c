@@ -42,7 +42,7 @@
  */
 
 static int sec_param[MAX_TRIES] =
-#if defined(ENABLE_FIPS140) || defined(GNUTLS_WOLFSSL)
+#ifdef ENABLE_FIPS140
 	{ GNUTLS_SEC_PARAM_MEDIUM, GNUTLS_SEC_PARAM_HIGH };
 #else
 	{ GNUTLS_SEC_PARAM_LOW, GNUTLS_SEC_PARAM_MEDIUM };
@@ -55,20 +55,23 @@ static void tls_log_func(int level, const char *str)
 
 const gnutls_datum_t raw_data = { (void *)"hello there", 11 };
 
-/* Perform sign and verify operations using provided keys */
-static void sign_verify_data_with_keys(gnutls_pk_algorithm_t algorithm,
-		gnutls_x509_privkey_t x509_key,
-		gnutls_privkey_t privkey,
-		gnutls_pubkey_t pubkey, int index)
+static void sign_verify_data(gnutls_pk_algorithm_t algorithm,
+			     gnutls_x509_privkey_t pkey)
 {
 	int ret;
+	gnutls_privkey_t privkey;
+	gnutls_pubkey_t pubkey;
 	gnutls_datum_t signature;
 	gnutls_digest_algorithm_t digest;
 	unsigned vflags = 0;
 
-	ret = gnutls_privkey_import_x509(privkey, x509_key, 0);
+	assert(gnutls_privkey_init(&privkey) >= 0);
+
+	ret = gnutls_privkey_import_x509(privkey, pkey, 0);
 	if (ret < 0)
 		fail("gnutls_privkey_import_x509\n");
+
+	assert(gnutls_pubkey_init(&pubkey) >= 0);
 
 	ret = gnutls_pubkey_import_privkey(pubkey, privkey, 0, 0);
 	if (ret < 0)
@@ -81,61 +84,25 @@ static void sign_verify_data_with_keys(gnutls_pk_algorithm_t algorithm,
 	if (digest == GNUTLS_DIG_GOSTR_94)
 		vflags |= GNUTLS_VERIFY_ALLOW_BROKEN;
 
-#if defined(GNUTLS_WOLFSSL)
-    /* Because we enforce a constraint when it comes to sign a message
-     * using RSA, if the key is <= 3072, we require it to be set to sha384,
-     * and not sha256, hence this hard set of it. */
-    if (algorithm == GNUTLS_PK_RSA_PSS && gnutls_sec_param_to_pk_bits(algorithm,
-							    sec_param[index]) == 3072) {
-        digest = GNUTLS_DIG_SHA384;
-    }
-#endif
-
 	/* sign arbitrary data */
 	ret = gnutls_privkey_sign_data(privkey, digest, 0, &raw_data,
-			&signature);
+				       &signature);
 	if (ret < 0)
-		fail("gnutls_privkey_sign_data: %s\n", gnutls_strerror(ret));
+		fail("gnutls_privkey_sign_data\n");
 
 	/* verify data */
 	ret = gnutls_pubkey_verify_data2(
-			pubkey,
-			gnutls_pk_to_sign(gnutls_pubkey_get_pk_algorithm(pubkey, NULL),
-				digest),
-			vflags, &raw_data, &signature);
+		pubkey,
+		gnutls_pk_to_sign(gnutls_pubkey_get_pk_algorithm(pubkey, NULL),
+				  digest),
+		vflags, &raw_data, &signature);
 	if (ret < 0)
 		fail("gnutls_pubkey_verify_data2\n");
 
-	gnutls_free(signature.data);
-}
-
-/* New function to perform sign/verify operations on two keys with shared
- * key objects, deinitializing only at the end */
-static void sign_verify_two_keys(gnutls_pk_algorithm_t algorithm,
-		gnutls_x509_privkey_t pkey1,
-		gnutls_x509_privkey_t pkey2, int index)
-{
-	gnutls_privkey_t privkey;
-	gnutls_pubkey_t pubkey;
-
-	assert(gnutls_privkey_init(&privkey) >= 0);
-	assert(gnutls_pubkey_init(&pubkey) >= 0);
-
-	/* Test first key */
-	sign_verify_data_with_keys(algorithm, pkey1, privkey, pubkey, index);
-
-	/* Reinitialize for second key */
-	assert(gnutls_privkey_init(&privkey) >= 0);
-	assert(gnutls_pubkey_init(&pubkey) >= 0);
-
-	/* Test second key */
-	sign_verify_data_with_keys(algorithm, pkey2, privkey, pubkey, index);
-
-	/* Clean up */
 	gnutls_pubkey_deinit(pubkey);
 	gnutls_privkey_deinit(privkey);
+	gnutls_free(signature.data);
 }
-
 
 static bool is_approved_pk_algo(gnutls_pk_algorithm_t algo)
 {
@@ -219,12 +186,10 @@ void doit(void)
 				fail("gnutls_x509_privkey_init: %d\n", ret);
 			}
 
-
 			ret = gnutls_x509_privkey_init(&dst);
 			if (ret < 0) {
 				fail("gnutls_x509_privkey_init: %d\n", ret);
 			}
-
 
 			FIPS_PUSH_CONTEXT();
 			ret = gnutls_x509_privkey_generate(
@@ -232,7 +197,6 @@ void doit(void)
 				gnutls_sec_param_to_pk_bits(algorithm,
 							    sec_param[i]),
 				0);
-
 			if (ret < 0) {
 				fail("gnutls_x509_privkey_generate (%s-%d): %s (%d)\n",
 				     gnutls_pk_algorithm_get_name(algorithm),
@@ -278,8 +242,15 @@ void doit(void)
 			}
 
 			FIPS_PUSH_CONTEXT();
+			sign_verify_data(algorithm, pkey);
+			if (is_approved_pk_algo(algorithm)) {
+				FIPS_POP_CONTEXT(APPROVED);
+			} else {
+				FIPS_POP_CONTEXT(NOT_APPROVED);
+			}
 
-			sign_verify_two_keys(algorithm, pkey, dst, i);
+			FIPS_PUSH_CONTEXT();
+			sign_verify_data(algorithm, dst);
 			if (is_approved_pk_algo(algorithm)) {
 				FIPS_POP_CONTEXT(APPROVED);
 			} else {

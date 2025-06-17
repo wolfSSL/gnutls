@@ -42,7 +42,7 @@ void doit(void)
 	global_init();
 
 /* Test includes a key that is greater than 8192-bit and is not supported with
- * wolfSSL - wc_SignatureVerify() - MAX_ENCODED_SIG_SZ.
+ * wolfSSL - wc_RsaSSL_Sign().
  */
 #ifndef GNUTLS_WOLFSSL
 	dtls_try_with_key_mtu(
