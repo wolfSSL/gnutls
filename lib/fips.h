@@ -74,6 +74,7 @@ unsigned _gnutls_fips_mode_enabled(void);
 
 void _gnutls_lib_simulate_error(void);
 void _gnutls_lib_force_operational(void);
+int _gnutls_have_lib_error(void);
 
 inline static bool
 is_mac_algo_hmac_approved_in_fips(gnutls_mac_algorithm_t algo)

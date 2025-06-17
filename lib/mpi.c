@@ -172,6 +172,14 @@ int _gnutls_mpi_init_scan_le(bigint_t *ret_mpi, const void *buffer,
 	return 0;
 }
 
+void _gnutls_mpi_zrelease(bigint_t *x)
+{
+	if (*x != NULL) {
+		_gnutls_mpi_clear(*x);
+		_gnutls_mpi_release(x);
+	}
+}
+
 int _gnutls_mpi_dprint_le(const bigint_t a, gnutls_datum_t *dest)
 {
 	int ret;

@@ -174,7 +174,7 @@ int _gnutls_mac_fast(gnutls_mac_algorithm_t algorithm, const void *key,
 	 */
 	cc = _gnutls_get_crypto_mac(algorithm);
 	if (cc != NULL) {
-                ret = cc->fast(algorithm, NULL, 0, key, keylen, text, textlen,
+		ret = cc->fast(algorithm, NULL, 0, key, keylen, text, textlen,
 			       digest);
 		if (ret < 0) {
 			gnutls_assert();

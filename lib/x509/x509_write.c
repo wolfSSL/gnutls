@@ -220,7 +220,6 @@ int gnutls_x509_crt_set_version(gnutls_x509_crt_t crt, unsigned int version)
 int gnutls_x509_crt_set_key(gnutls_x509_crt_t crt, gnutls_x509_privkey_t key)
 {
 	int result;
-	const gnutls_crypto_pk_st *cc;
 
 	if (crt == NULL) {
 		gnutls_assert();
@@ -228,27 +227,6 @@ int gnutls_x509_crt_set_key(gnutls_x509_crt_t crt, gnutls_x509_privkey_t key)
 	}
 
 	MODIFIED(crt);
-
-	cc = _gnutls_get_crypto_pk(key->pk_algorithm);
-	if (cc != NULL && cc->export_pubkey_backend != NULL) {
-		result = cc->export_pubkey_backend(&crt->pk_ctx, key->pk_ctx,
-						   &crt->raw_spki, 0);
-		if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
-			gnutls_assert();
-			return result;
-		} else if (result == 0) {
-			crt->pk_algorithm = key->pk_algorithm;
-			result = _gnutls_x509_encode_with_PKI_params(
-				crt->cert,
-				"tbsCertificate.subjectPublicKeyInfo",
-				&key->params, &crt->raw_spki);
-			if (result != 0) {
-				gnutls_assert();
-				return result;
-			}
-			return 0;
-		}
-	}
 
 	result = _gnutls_x509_encode_and_copy_PKI_params(
 		crt->cert, "tbsCertificate.subjectPublicKeyInfo", &key->params);
@@ -288,13 +266,8 @@ int gnutls_x509_crt_set_crq(gnutls_x509_crt_t crt, gnutls_x509_crq_t crq)
 	MODIFIED(crt);
 
 	result = gnutls_x509_crq_verify(crq, 0);
-	if (result < 0) {
-/* WolfSSL provider may generate ECC keys that don't validate with
-     * standard GnuTLS validation but are still cryptographically valid */
-#ifndef GNUTLS_WOLFSSL
+	if (result < 0)
 		return gnutls_assert_val(result);
-#endif
-    }
 
 	result = asn1_copy_node(crt->cert, "tbsCertificate.subject", crq->crq,
 				"certificationRequestInfo.subject");

@@ -18,7 +18,6 @@
  */
 
 #include "gnutls_int.h"
-#include "crypto-backend.h"
 #include <gnutls/pkcs11.h>
 #include <stdio.h>
 #include <string.h>
@@ -92,22 +91,11 @@ int gnutls_privkey_export_rsa_raw2(gnutls_privkey_t key, gnutls_datum_t *m,
 {
 	gnutls_pk_params_st params;
 	int ret;
-        const gnutls_crypto_pk_st *cc;
 
 	if (key == NULL) {
 		gnutls_assert();
 		return GNUTLS_E_INVALID_REQUEST;
 	}
-
-        cc = _gnutls_get_crypto_pk(key->pk_algorithm);
-        if (cc != NULL && cc->export_rsa_raw_backend != NULL) {
-                ret = cc->export_rsa_raw_backend(key->pk_ctx, m, e, d, p, q, u,
-                                                 e1, e2, flags);
-                if (ret < 0) {
-                        gnutls_assert();
-                }
-                return ret;
-        }
 
 	gnutls_pk_params_init(&params);
 
@@ -236,19 +224,6 @@ int gnutls_privkey_export_dh_raw(gnutls_privkey_t key,
 		gnutls_pk_params_release(&pk_params);
 	}
 
-	int result;
-
-	const gnutls_crypto_pk_st *cc = _gnutls_get_crypto_pk(GNUTLS_PK_DH);
-	if (cc != NULL && cc->privkey_export_dh_raw_backend != NULL) {
-		result = cc->privkey_export_dh_raw_backend(key->pk_ctx, y, x);
-		if (result < 0 && result != GNUTLS_E_ALGO_NOT_SUPPORTED) {
-			gnutls_assert();
-			return result;
-		} else if (result == 0) {
-			return 0;
-		}
-	}
-
 	return gnutls_privkey_export_dsa_raw2(key, NULL, NULL, NULL, y, x,
 					      flags);
 }
@@ -313,18 +288,6 @@ int gnutls_privkey_export_ecc_raw2(gnutls_privkey_t key,
 	}
 
 	gnutls_pk_params_init(&params);
-
-	const gnutls_crypto_pk_st *cc = _gnutls_get_crypto_pk(GNUTLS_PK_ECDSA);
-	if (cc != NULL && cc->privkey_export_ecdh_raw_backend != NULL) {
-		ret = cc->privkey_export_ecdh_raw_backend(key->pk_ctx, curve, x,
-			  y, k, (flags & GNUTLS_EXPORT_FLAG_NO_LZ) == 0);
-		if (ret < 0 && ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
-			gnutls_assert();
-			return ret;
-		} else if (ret == 0) {
-			return 0;
-		}
-	}
 
 	ret = _gnutls_privkey_get_mpis(key, &params);
 	if (ret < 0)

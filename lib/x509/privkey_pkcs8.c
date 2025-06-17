@@ -64,31 +64,12 @@ inline static int _encode_privkey(gnutls_x509_privkey_t pkey,
 {
 	int ret;
 	asn1_node spk = NULL;
-	const gnutls_crypto_pk_st *cc;
 
 	switch (pkey->params.algo) {
 	case GNUTLS_PK_EDDSA_ED25519:
 	case GNUTLS_PK_EDDSA_ED448:
 	case GNUTLS_PK_ECDH_X25519:
 	case GNUTLS_PK_ECDH_X448:
-		cc = _gnutls_get_crypto_pk(pkey->params.algo);
-		if (cc != NULL && cc->privkey_export_ecdh_raw_backend != NULL) {
-			gnutls_datum_t priv_raw;
-			ret = cc->privkey_export_ecdh_raw_backend(pkey->pk_ctx,
-			      NULL, NULL, NULL, &priv_raw, 0);
-			if (ret < 0 && ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
-				gnutls_assert();
-				goto error;
-			} else if (ret == 0) {
-				ret = _gnutls_x509_encode_string(
-						ASN1_ETYPE_OCTET_STRING,
-						priv_raw.data, priv_raw.size,
-						raw);
-				gnutls_free(priv_raw.data);
-				return 0;
-			}
-		}
-
 		/* we encode as octet string (which is going to be stored inside
 		 * another octet string). No comments. */
 		ret = _gnutls_x509_encode_string(ASN1_ETYPE_OCTET_STRING,
@@ -159,18 +140,6 @@ inline static int _encode_privkey(gnutls_x509_privkey_t pkey,
 	case GNUTLS_PK_RSA_PSS:
 	case GNUTLS_PK_RSA_OAEP:
 	case GNUTLS_PK_ECDSA:
-		cc = _gnutls_get_crypto_pk(pkey->params.algo);
-		if (cc != NULL && cc->export_privkey_x509_backend != NULL) {
-			ret = cc->export_privkey_x509_backend(pkey->pk_ctx,
-							      raw);
-			if (ret < 0 && ret != GNUTLS_E_ALGO_NOT_SUPPORTED) {
-				gnutls_assert();
-				goto error;
-			} else if (ret == 0) {
-                        	return 0;
-			}
-		}
-
 		ret = _gnutls_x509_export_int2(pkey->key, GNUTLS_X509_FMT_DER,
 					       "", raw);
 		if (ret < 0) {
@@ -994,7 +963,6 @@ static int _decode_pkcs8_rsa_key(asn1_node pkcs8_asn,
 {
 	int ret;
 	gnutls_datum_t tmp = { NULL, 0 };
-	const gnutls_crypto_pk_st *cc;
 
 	ret = _gnutls_x509_read_value(pkcs8_asn, "privateKey", &tmp);
 	if (ret < 0) {
@@ -1003,14 +971,6 @@ static int _decode_pkcs8_rsa_key(asn1_node pkcs8_asn,
 	}
 
 	pkey->key = _gnutls_privkey_decode_pkcs1_rsa_key(&tmp, pkey);
-	cc = _gnutls_get_crypto_pk(GNUTLS_PK_RSA);
-	if (cc != NULL && cc->import_privkey_x509_backend != NULL) {
-		gnutls_pk_algorithm_t algo;
-		gnutls_ecc_curve_t curve;
-		cc->import_privkey_x509_backend(&pkey->pk_ctx, &algo, &curve,
-						&tmp, GNUTLS_X509_FMT_DER, NULL,
-						NULL);
-	}
 	_gnutls_free_key_datum(&tmp);
 
 	if (pkey->key == NULL) {

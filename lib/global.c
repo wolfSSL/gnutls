@@ -373,7 +373,8 @@ static int _gnutls_global_init(unsigned constructor)
 	_gnutls_afalg_init();
 
         if (getenv("GNUTLS_NO_PROVIDER") == NULL) {
-		/* we check if PROVIDER_PATH was set, if not, we set the default value */
+		/* we check if PROVIDER_PATH was set, if not, we set the default
+		 * value */
 		const char *path_value = getenv("PROVIDER_PATH");
 		if (path_value == NULL) {
 			_gnutls_debug_log("PROVIDER_PATH was not set, setting to default value: /opt/wolfssl-gnutls-wrapper/lib/");

@@ -83,8 +83,6 @@ typedef struct gnutls_x509_dn_st {
 } gnutls_x509_dn_st;
 
 typedef struct gnutls_x509_crt_int {
-	void *pk_ctx;
-	gnutls_pk_algorithm_t pk_algorithm;
 	asn1_node cert;
 	int use_extensions;
 	unsigned expanded; /* a certificate has been expanded */
@@ -114,8 +112,6 @@ typedef struct gnutls_x509_crt_int {
 #define MODIFIED(crt) crt->modified = 1
 
 typedef struct gnutls_x509_crq_int {
-	void *pk_ctx;
-	gnutls_pk_algorithm_t pk_algorithm;
 	asn1_node crq;
 } gnutls_x509_crq_int;
 
@@ -144,10 +140,6 @@ struct pbkdf2_params {
 };
 
 typedef struct gnutls_x509_privkey_int {
-    void *pk_ctx;
-	gnutls_privkey_type_t type;
-	gnutls_pk_algorithm_t pk_algorithm;
-
 	/* the size of params depends on the public
 	 * key algorithm
 	 */
