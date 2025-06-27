@@ -390,16 +390,24 @@ static int _gnutls_global_init(unsigned constructor)
 	_gnutls_cryptodev_init();
 	_gnutls_afalg_init();
 
-        if (getenv("GNUTLS_NO_PROVIDER") == NULL) {
-		/* we check if PROVIDER_PATH was set, if not, we set the default
-		 * value */
-		const char *path_value = getenv("PROVIDER_PATH");
-		if (path_value == NULL) {
-			_gnutls_debug_log("PROVIDER_PATH was not set, setting to default value: /opt/wolfssl-gnutls-wrapper/lib/");
-			path_value = "/opt/wolfssl-gnutls-wrapper/lib/libgnutls-wolfssl-wrapper.so";
+	if (getenv("GNUTLS_NO_PROVIDER") == NULL) {
+		/* Build full pathname to the provider’s shared object  *
+		 * <PROVIDER_PATH>/lib/libgnutls-wolfssl-wrapper.so	*/
+
+		const char *dir = getenv("PROVIDER_PATH");
+		if (dir == NULL || *dir == '\0') {
+			dir = "/opt/wolfssl-gnutls-wrapper";
+			_gnutls_debug_log("PROVIDER_PATH was not set, using default: %s\n",
+					dir);
 		}
 
-		if (gnutls_load_crypto_provider(path_value) != 0) {
+		char provider_path[PATH_MAX];
+		snprintf(provider_path, sizeof(provider_path),
+				"%s/lib/libgnutls-wolfssl-wrapper.so", dir);
+
+		_gnutls_debug_log("Loading crypto provider: %s\n", provider_path);
+
+		if (gnutls_load_crypto_provider(provider_path) != 0) {
 			gnutls_assert();
 			goto out;
 		}
