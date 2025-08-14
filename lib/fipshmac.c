@@ -75,9 +75,9 @@ static int get_hmac(const char *path, char *hmac, size_t hmac_size)
 
 static int print_lib(const char *path, const char *soname)
 {
-	int ret;
+	int ret = 0;
 	char *real_path = NULL;
-	char hmac[HMAC_STR_SIZE];
+	char hmac[HMAC_STR_SIZE] = {0};
 
 	real_path = canonicalize_file_name(path);
 	if (real_path == NULL) {
