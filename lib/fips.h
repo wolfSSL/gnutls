@@ -158,6 +158,10 @@ is_cipher_algo_allowed_in_fips(gnutls_cipher_algorithm_t algo)
 	case GNUTLS_CIPHER_AES_128_GCM:
 	case GNUTLS_CIPHER_AES_192_GCM:
 	case GNUTLS_CIPHER_AES_256_GCM:
+#if defined(GNUTLS_WOLFSSL)
+  case GNUTLS_CIPHER_AES_128_SIV:
+  case GNUTLS_CIPHER_AES_256_SIV:
+#endif
 		return true;
 	default:
 		return false;
